@@ -9,6 +9,7 @@ export type PrepareFormDataResult = {
 };
 
 export type RequestResult = {
+  event: string | null;
   status: number;
   html: string | null;
   targets: Element[];

@@ -59,6 +59,8 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
             target.innerHTML = result.html!;
             processAppearEvents(target);
           });
+        } else if (result.event) {
+          broadcastEvent(result.event);
         }
       })
       .catch((error) => {
@@ -109,6 +111,17 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     }
   }
 
+  function broadcastEvent(eventType: string) {
+    const elements = document.querySelectorAll(`[s-on*="${eventType}"]`);
+    for (const element of elements) {
+      const syntheticEvent = new CustomEvent(eventType, {
+        bubbles: false,
+        cancelable: true,
+      });
+      processElement(element, syntheticEvent, false);
+    }
+  }
+
   function enableWebSockets() {
     const url = document.body.getAttribute("s-ws");
     if (!url) return;
@@ -117,19 +130,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
 
     ws.onmessage = (event) => {
       const eventType = event.data.toString();
-
-      // Find all elements with s-on attribute containing this event type
-      const elements = document.querySelectorAll(
-        `[s-on*="${eventType}"]`,
-      );
-
-      for (const element of elements) {
-        const syntheticEvent = new CustomEvent(eventType, {
-          bubbles: false,
-          cancelable: true,
-        });
-        processElement(element, syntheticEvent, false);
-      }
+      broadcastEvent(eventType);
     };
 
     ws.onerror = (error) => {

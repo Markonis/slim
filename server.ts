@@ -17,7 +17,7 @@ app.get('/', (c) => {
   <h1>Hello World 123</h1>
   <button s-on="click" s-put="/increment" s-target="#result">Click Me!</button>
   <div>Target: <span id="result"></span></div>
-  <div style="height: 100vh;">Server target: <span id="server-result"></span></div>
+  <div style="height: 50vh;">Server target: <span id="server-result"></span></div>
   <h2 s-on="appear | counter-updated" s-get="/counter" s-target="h3"></h2>
   <h3></h3>
 </body>
@@ -40,7 +40,11 @@ app.put('/increment', (c) => {
   if (counter % 2 === 0) {
     c.header("s-target", "#server-result");
   }
-  
+
+  if (counter % 3 === 0) {
+    return c.text("counter-updated");
+  }
+
   return c.html(`Counter: ${counter}`);
 });
 

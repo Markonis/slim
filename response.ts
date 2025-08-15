@@ -10,6 +10,7 @@ export function processResponse(
     return Promise.resolve({
       status: response.status,
       html: null,
+      event: null,
       targets: [],
     });
   }
@@ -18,16 +19,30 @@ export function processResponse(
   const finalTargetSelector = serverTargetSelector || targetSelector;
 
   return response.text().then((text) => {
-    const isHtml = response.headers.get("content-type")?.includes(
-      "text/html",
-    );
-    const html = isHtml ? text : null;
-    const targets = determineTargets(element, finalTargetSelector);
-    return {
-      status: response.status,
-      html,
-      targets,
-    };
+    const contentType = response.headers.get("content-type");
+    switch (contentType) {
+      case "text/html":
+        return {
+          status: response.status,
+          html: text,
+          event: null,
+          targets: determineTargets(element, finalTargetSelector),
+        };
+      case "text/plain":
+        return {
+          status: response.status,
+          html: null,
+          event: text,
+          targets: [],
+        };
+      default:
+        return {
+          status: response.status,
+          html: null,
+          event: null,
+          targets: [],
+        };
+    }
   });
 }
 
