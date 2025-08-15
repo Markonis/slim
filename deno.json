@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "out": "deno bundle slim.ts > slim.js"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1"
+  },
+  "compilerOptions": {
+    "lib": ["dom", "ESNext", "DOM.Iterable"]
+  }
+}
