@@ -1,5 +1,3 @@
-import { prefix } from "./constants.ts";
-
 export function collectQueryParams(element: Element): URLSearchParams {
   const params = new URLSearchParams();
   let currentElement: Element | null = element;
@@ -13,7 +11,7 @@ export function collectQueryParams(element: Element): URLSearchParams {
 
   // Process from root to element (so closer elements override)
   for (const ancestor of ancestors) {
-    const queryAttr = ancestor.getAttribute(`${prefix}-query`);
+    const queryAttr = ancestor.getAttribute("s-query");
     if (queryAttr) {
       const ancestorParams = new URLSearchParams(queryAttr);
       ancestorParams.forEach((value, key) => params.set(key, value));

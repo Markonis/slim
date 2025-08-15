@@ -1,4 +1,3 @@
-import { prefix } from "./constants.ts";
 import { appendQueryParams, collectQueryParams } from "./query.ts";
 import { ElementConfig } from "./types.ts";
 import { sendRequest } from "./request.ts";
@@ -11,7 +10,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     element: Element,
     method: string,
   ): ElementConfig | null {
-    const url = element.getAttribute(`${prefix}-${method}`);
+    const url = element.getAttribute(`s-${method}`);
     if (url) return { url, method };
     return null;
   }
@@ -27,8 +26,8 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     }
 
     const { url, method } = config;
-    const targetSelector = element.getAttribute(`${prefix}-target`);
-    const eventSpecs = parseEventSpecs(element.getAttribute(`${prefix}-on`));
+    const targetSelector = element.getAttribute("s-target");
+    const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
     for (const spec of eventSpecs) {
       if (shouldHandleEvent(event, spec)) {
         handleEvent(url, method, element, targetSelector);
@@ -90,10 +89,10 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
   }
 
   function processAppearEvents(rootElement: Element) {
-    const elements = rootElement.querySelectorAll(`[${prefix}-on]`);
+    const elements = rootElement.querySelectorAll("[s-on]");
 
     for (const element of elements) {
-      const eventSpecs = parseEventSpecs(element.getAttribute(`${prefix}-on`));
+      const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
       if (hasAppearEvent) {
         appearObserver.observe(element);
@@ -111,7 +110,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
   }
 
   function enableWebSockets() {
-    const url = document.body.getAttribute(`${prefix}-ws`);
+    const url = document.body.getAttribute("s-ws");
     if (!url) return;
 
     const ws = new WebSocket(url);
@@ -121,7 +120,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
 
       // Find all elements with s-on attribute containing this event type
       const elements = document.querySelectorAll(
-        `[${prefix}-on*="${eventType}"]`,
+        `[s-on*="${eventType}"]`,
       );
 
       for (const element of elements) {
