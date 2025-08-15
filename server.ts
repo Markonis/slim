@@ -17,8 +17,9 @@ app.get('/', (c) => {
   <h1>Hello World 123</h1>
   <button s-on="click" s-put="/increment" s-target="#result">Click Me!</button>
   <div>Target: <span id="result"></span></div>
-  <div>Server target: <span id="server-result"></span></div>
-  <h2 s-on="counter-updated" s-get="/counter"></h2>
+  <div style="height: 100vh;">Server target: <span id="server-result"></span></div>
+  <h2 s-on="appear | counter-updated" s-get="/counter" s-target="h3"></h2>
+  <h3></h3>
 </body>
 </html>`);
 });
@@ -35,8 +36,11 @@ app.put('/increment', (c) => {
       }
     });
   }
+
+  if (counter % 2 === 0) {
+    c.header("s-target", "#server-result");
+  }
   
-  c.header("s-target", "#server-result");
   return c.html(`Counter: ${counter}`);
 });
 

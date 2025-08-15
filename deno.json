@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "out": "deno bundle slim.ts > slim.js",
+    "build": "deno bundle --minify slim.ts > slim.js",
     "server": "deno run --allow-all --watch --unstable-raw-imports server.ts"
   },
   "imports": {
