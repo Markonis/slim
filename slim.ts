@@ -17,7 +17,7 @@
     targets: Element[];
   }
   
-  function processElement(element: Element, event: Event) {
+  function processElement(element: Element, event: Event, bubble: boolean) {
     let url: string | null = null;
     let method: string | null = null;
   
@@ -36,21 +36,63 @@
       const eventSpecs = parseEventSpecs(element.getAttribute(`${prefix}-on`));
       for (const spec of eventSpecs) {
         if (shouldHandleEvent(event, spec)) {
-          handleEvent(event, url, method, element, targetSelector);
+          handleEvent(url, method, element, targetSelector);
           event.preventDefault();
           break;
         }
       }
     }
   
+    if (!bubble) return;
     const parent = element.parentElement;
     if (parent) {
-      processElement(parent, event);
+      processElement(parent, event, true);
     }
   }
   
-  function handleEvent(event: Event, url: string, method: string, element: Element, targetSelector: string | null) {
-    sendRequest(url, method, element, targetSelector)
+  function collectQueryParams(element: Element): URLSearchParams {
+    const params = new URLSearchParams();
+    let currentElement: Element | null = element;
+    
+    // Collect from ancestors first (lower precedence)
+    const ancestors: Element[] = [];
+    while (currentElement) {
+      ancestors.unshift(currentElement); // Add to beginning for correct order
+      currentElement = currentElement.parentElement;
+    }
+    
+    // Process from root to element (so closer elements override)
+    ancestors.forEach(ancestor => {
+      const queryAttr = ancestor.getAttribute(`${prefix}-query`);
+      if (queryAttr) {
+        const ancestorParams = new URLSearchParams(queryAttr);
+        ancestorParams.forEach((value, key) => {
+          params.set(key, value);
+        });
+      }
+    });
+    
+    return params;
+  }
+
+  function appendQueryParams(url: string, params: URLSearchParams): string {
+    if (params.toString() === '') {
+      return url;
+    }
+    
+    const urlObj = new URL(url, location.origin);
+    params.forEach((value, key) => {
+      urlObj.searchParams.set(key, value);
+    });
+    
+    return urlObj.toString();
+  }
+
+  function handleEvent(url: string, method: string, element: Element, targetSelector: string | null) {
+    const queryParams = collectQueryParams(element);
+    const urlWithQueryParams = appendQueryParams(url, queryParams);
+    
+    sendRequest(urlWithQueryParams, method, element, targetSelector)
       .then(result => {
         if (result.html) {
           result.targets.forEach(target => {
@@ -64,6 +106,15 @@
   }
   
   function processResponse(response: Response, element: Element, targetSelector: string | null): Promise<RequestResult> {
+    if (response.headers.get('S-Refresh') === 'true') {
+      location.reload();
+      return Promise.resolve({
+        status: response.status,
+        html: null,
+        targets: []
+      });
+    }
+
     const serverTargetSelector = response.headers.get('S-Target');
     const finalTargetSelector = serverTargetSelector || targetSelector;
     
@@ -161,13 +212,51 @@
       return null;
     }
   }
-  
-  const eventTypesToProcess = ["click", "change", "input", "submit"];
-  document.addEventListener("DOMContentLoaded", () => {
+
+  function registerEventHandlers() {
+    const eventTypesToProcess = ["click", "change", "input", "submit"];
     eventTypesToProcess.forEach((eventType) => {
       document.body.addEventListener(eventType, (event) => {
-        processElement(event.target as Element, event);
+        processElement(event.target as Element, event, true);
       }, { capture: true });
     });
+  }
+
+  function enableWebSockets() {
+    const url = document.body.getAttribute(`${prefix}-ws`);
+    if (!url) return;
+
+    const ws = new WebSocket(url);
+    
+    ws.onmessage = (event) => {
+      const eventType = event.data.toString();
+      
+      // Find all elements with s-on attribute containing this event type
+      const elements = document.querySelectorAll(`[${prefix}-on*="${eventType}"]`);
+      
+      elements.forEach(element => {
+        // Create synthetic event with the custom type
+        const syntheticEvent = new CustomEvent(eventType, {
+          bubbles: false,
+          cancelable: true
+        });
+        
+        // Call processElement with bubble: false - it will handle the parsing and matching
+        processElement(element, syntheticEvent, false);
+      });
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+  }
+  
+  document.addEventListener("DOMContentLoaded", () => {
+    registerEventHandlers();
+    enableWebSockets();
   });  
 })();
