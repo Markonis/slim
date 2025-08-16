@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "build": "deno bundle --minify slim.ts > slim.js",
+    "commit": "deno task build && git add . && git commit",
+    "build": "deno bundle --minify src/main.ts > dist/slim.min.js",
     "server": "deno run --allow-all --watch --unstable-raw-imports server.ts"
   },
   "imports": {

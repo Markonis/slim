@@ -1,5 +1,5 @@
 import { Hono } from '@hono/hono';
-import slimJS from "./slim.js" with {type: "text"};
+import slimJS from "../dist/slim.min.js" with {type: "text"};
 
 const app = new Hono();
 let counter = 0;
