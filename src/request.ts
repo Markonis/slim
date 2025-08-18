@@ -9,7 +9,7 @@ function prepareFormData(
   const formData = new FormData(form);
 
   if (method.toUpperCase() === "GET") {
-    const urlObj = new URL(url);
+    const urlObj = getFullURL(url);
     for (const [key, value] of formData.entries()) {
       if (value instanceof File) continue;
       urlObj.searchParams.append(key, value.toString());
@@ -17,6 +17,14 @@ function prepareFormData(
     return { url: urlObj.toString(), body: null };
   } else {
     return { url, body: formData };
+  }
+}
+
+function getFullURL(url: string): URL {
+  if (url.startsWith("http")) {
+    return new URL(url);
+  } else {
+    return new URL(url, location.origin);
   }
 }
 
