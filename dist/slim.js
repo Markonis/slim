@@ -169,23 +169,23 @@ function parseOneEventSpec(spec) {
   }
   function processElement(element, event, bubble) {
     const config = getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
-    if (!config) {
-      return;
-    }
-    const { url, method } = config;
-    const targetSelector = element.getAttribute("s-target");
-    const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
-    for (const spec of eventSpecs) {
-      if (shouldHandleEvent(event, spec)) {
-        handleEvent(url, method, element, targetSelector);
-        event.preventDefault();
-        break;
+    if (config) {
+      const { url, method } = config;
+      const targetSelector = element.getAttribute("s-target");
+      const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
+      for (const spec of eventSpecs) {
+        if (shouldHandleEvent(event, spec)) {
+          handleEvent(url, method, element, targetSelector);
+          event.preventDefault();
+          break;
+        }
       }
-    }
-    if (!bubble) return;
-    const parent = element.parentElement;
-    if (parent) {
-      processElement(parent, event, true);
+    } else {
+      if (!bubble) return;
+      const parent = element.parentElement;
+      if (parent) {
+        processElement(parent, event, true);
+      }
     }
   }
   function handleEvent(url, method, element, targetSelector) {
