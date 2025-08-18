@@ -49,8 +49,8 @@ export function sendRequest(
   url: string,
   method: string,
   element: Element,
-  targetSelector: string | null,
 ): Promise<RequestResult> {
+  const targetSelector = element.getAttribute("s-target");
   if (element instanceof HTMLFormElement) {
     return sendFormRequest(url, method, element, targetSelector);
   } else {

@@ -113,7 +113,8 @@ function sendFormRequest(url, method, element, targetSelector) {
   }
   return fetch(finalUrl, fetchOptions).then((response) => processResponse(response, element, targetSelector));
 }
-function sendRequest(url, method, element, targetSelector) {
+function sendRequest(url, method, element) {
+  const targetSelector = element.getAttribute("s-target");
   if (element instanceof HTMLFormElement) {
     return sendFormRequest(url, method, element, targetSelector);
   } else {
@@ -197,11 +198,10 @@ function parseOneEventSpec(spec) {
     const config = getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
     if (config) {
       const { url, method } = config;
-      const targetSelector = element.getAttribute("s-target");
       const eventSpecs = parseEventSpecs(element);
       for (const spec of eventSpecs) {
         if (shouldHandleEvent(event, spec)) {
-          handleEvent(url, method, element, targetSelector);
+          handleEvent(url, method, element);
           event.preventDefault();
           break;
         }
@@ -214,21 +214,24 @@ function parseOneEventSpec(spec) {
       }
     }
   }
-  function handleEvent(url, method, element, targetSelector) {
+  function handleEvent(url, method, element) {
     const queryParams = collectQueryParams(element);
     const urlWithQueryParams = appendQueryParams(url, queryParams);
-    sendRequest(urlWithQueryParams, method, element, targetSelector).then((result) => {
-      if (result.html !== null) {
-        result.targets.forEach((target) => {
-          target.innerHTML = result.html;
-          processAppearEvents(target);
-        });
-      } else if (result.event) {
-        broadcastEvent(result.event);
-      }
-    }).catch((error) => {
-      console.error("Request failed:", error);
-    });
+    const confirmMessage = element.getAttribute("s-confirm");
+    if (!confirmMessage || confirm(confirmMessage)) {
+      sendRequest(urlWithQueryParams, method, element).then((result) => {
+        if (result.html !== null) {
+          result.targets.forEach((target) => {
+            target.innerHTML = result.html;
+            processAppearEvents(target);
+          });
+        } else if (result.event) {
+          broadcastEvent(result.event);
+        }
+      }).catch((error) => {
+        console.error("Request failed:", error);
+      });
+    }
   }
   function handleAppearIntersection(entries) {
     for (const entry of entries) {

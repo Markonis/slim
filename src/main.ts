@@ -23,11 +23,10 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
 
     if (config) {
       const { url, method } = config;
-      const targetSelector = element.getAttribute("s-target");
       const eventSpecs = parseEventSpecs(element);
       for (const spec of eventSpecs) {
         if (shouldHandleEvent(event, spec)) {
-          handleEvent(url, method, element, targetSelector);
+          handleEvent(url, method, element);
           event.preventDefault();
           break;
         }
@@ -45,25 +44,26 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     url: string,
     method: string,
     element: Element,
-    targetSelector: string | null,
   ) {
     const queryParams = collectQueryParams(element);
     const urlWithQueryParams = appendQueryParams(url, queryParams);
-
-    sendRequest(urlWithQueryParams, method, element, targetSelector)
-      .then((result) => {
-        if (result.html !== null) {
-          result.targets.forEach((target) => {
-            target.innerHTML = result.html!;
-            processAppearEvents(target);
-          });
-        } else if (result.event) {
-          broadcastEvent(result.event);
-        }
-      })
-      .catch((error) => {
-        console.error("Request failed:", error);
-      });
+    const confirmMessage = element.getAttribute("s-confirm");
+    if (!confirmMessage || confirm(confirmMessage)) {
+      sendRequest(urlWithQueryParams, method, element)
+        .then((result) => {
+          if (result.html !== null) {
+            result.targets.forEach((target) => {
+              target.innerHTML = result.html!;
+              processAppearEvents(target);
+            });
+          } else if (result.event) {
+            broadcastEvent(result.event);
+          }
+        })
+        .catch((error) => {
+          console.error("Request failed:", error);
+        });
+    }
   }
 
   function handleAppearIntersection(entries: IntersectionObserverEntry[]) {
