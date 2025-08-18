@@ -16,6 +16,13 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
   }
 
   function processElement(element: Element, event: Event, bubble: boolean) {
+    const emit = element.getAttribute("s-emit");
+    if (emit) {
+      event.preventDefault();
+      broadcastEvent(emit);
+      return;
+    }
+
     const config = getElementConfig(element, "get") ??
       getElementConfig(element, "post") ??
       getElementConfig(element, "put") ??

@@ -195,6 +195,12 @@ function parseOneEventSpec(spec) {
     return null;
   }
   function processElement(element, event, bubble) {
+    const emit = element.getAttribute("s-emit");
+    if (emit) {
+      event.preventDefault();
+      broadcastEvent(emit);
+      return;
+    }
     const config = getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
     if (config) {
       const { url, method } = config;
