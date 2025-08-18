@@ -1,8 +1,8 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "tasks": {
     "commit": "deno task build && git add . && git commit",
-    "build": "deno bundle --minify src/main.ts > dist/slim.min.js",
+    "build": "deno bundle src/main.ts > dist/slim.js && deno bundle --minify src/main.ts > dist/slim.min.js",
     "server": "deno run --allow-all --watch --unstable-raw-imports server.ts"
   },
   "imports": {
