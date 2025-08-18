@@ -20,7 +20,8 @@ export function processResponse(
 
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
-    switch (contentType) {
+    const mediaType = contentType?.split(";")[0];
+    switch (mediaType) {
       case "text/html":
         return {
           status: response.status,
