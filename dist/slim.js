@@ -192,7 +192,7 @@ function parseOneEventSpec(spec) {
     const queryParams = collectQueryParams(element);
     const urlWithQueryParams = appendQueryParams(url, queryParams);
     sendRequest(urlWithQueryParams, method, element, targetSelector).then((result) => {
-      if (result.html) {
+      if (result.html !== null) {
         result.targets.forEach((target) => {
           target.innerHTML = result.html;
           processAppearEvents(target);

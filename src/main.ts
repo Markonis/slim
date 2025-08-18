@@ -52,7 +52,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
 
     sendRequest(urlWithQueryParams, method, element, targetSelector)
       .then((result) => {
-        if (result.html) {
+        if (result.html !== null) {
           result.targets.forEach((target) => {
             target.innerHTML = result.html!;
             processAppearEvents(target);
