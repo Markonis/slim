@@ -134,10 +134,36 @@ function shouldHandleEvent(event, eventSpec) {
   }
   return true;
 }
-function parseEventSpecs(spec) {
-  if (!spec) return [];
+function parseEventSpecs(element) {
+  const spec = element.getAttribute("s-on");
+  if (!spec) return getDefaultEventSpecs(element);
   const parts = spec.split(/\s*\|\s*/);
   return parts.map(parseOneEventSpec).filter(Boolean);
+}
+function getDefaultEventSpecs(element) {
+  switch (element.tagName) {
+    case "FORM":
+      return [
+        {
+          event: "submit"
+        }
+      ];
+    case "BUTTON":
+      return [
+        {
+          event: "click"
+        }
+      ];
+    case "SELECT":
+    case "INPUT":
+      return [
+        {
+          event: "change"
+        }
+      ];
+    default:
+      return [];
+  }
 }
 function parseOneEventSpec(spec) {
   const parts = spec.split(/\s+/);
@@ -172,7 +198,7 @@ function parseOneEventSpec(spec) {
     if (config) {
       const { url, method } = config;
       const targetSelector = element.getAttribute("s-target");
-      const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
+      const eventSpecs = parseEventSpecs(element);
       for (const spec of eventSpecs) {
         if (shouldHandleEvent(event, spec)) {
           handleEvent(url, method, element, targetSelector);
@@ -227,7 +253,7 @@ function parseOneEventSpec(spec) {
   function processAppearEvents(rootElement) {
     const elements = rootElement.querySelectorAll("[s-on]");
     for (const element of elements) {
-      const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
+      const eventSpecs = parseEventSpecs(element);
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
       if (hasAppearEvent) {
         appearObserver.observe(element);

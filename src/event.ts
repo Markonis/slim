@@ -13,10 +13,25 @@ export function shouldHandleEvent(event: Event, eventSpec: EventSpec) {
   return true;
 }
 
-export function parseEventSpecs(spec: string | null): EventSpec[] {
-  if (!spec) return [];
+export function parseEventSpecs(element: Element): EventSpec[] {
+  const spec = element.getAttribute("s-on");
+  if (!spec) return getDefaultEventSpecs(element);
   const parts = spec.split(/\s*\|\s*/);
   return parts.map(parseOneEventSpec).filter(Boolean) as EventSpec[];
+}
+
+function getDefaultEventSpecs(element: Element): EventSpec[] {
+  switch (element.tagName) {
+    case "FORM":
+      return [{ event: "submit" }];
+    case "BUTTON":
+      return [{ event: "click" }];
+    case "SELECT":
+    case "INPUT":
+      return [{ event: "change" }];
+    default:
+      return [];
+  }
 }
 
 function parseOneEventSpec(spec: string): EventSpec | null {

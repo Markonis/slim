@@ -24,7 +24,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     if (config) {
       const { url, method } = config;
       const targetSelector = element.getAttribute("s-target");
-      const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
+      const eventSpecs = parseEventSpecs(element);
       for (const spec of eventSpecs) {
         if (shouldHandleEvent(event, spec)) {
           handleEvent(url, method, element, targetSelector);
@@ -92,7 +92,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     const elements = rootElement.querySelectorAll("[s-on]");
 
     for (const element of elements) {
-      const eventSpecs = parseEventSpecs(element.getAttribute("s-on"));
+      const eventSpecs = parseEventSpecs(element);
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
       if (hasAppearEvent) {
         appearObserver.observe(element);
