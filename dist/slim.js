@@ -168,15 +168,15 @@ function getDefaultEventSpecs(element) {
   }
 }
 function parseOneEventSpec(spec) {
-  const parts = spec.split(/\s+/);
+  const parts = spec.split(/\s+on\s+/);
   if (parts.length === 1) {
     return {
       event: parts[0]
     };
-  } else if (parts.length === 3 && parts[1] === "on") {
+  } else if (parts.length === 2) {
     return {
       event: parts[0],
-      selector: parts[2]
+      selector: parts[1]
     };
   } else {
     console.warn(`Invalid event spec: ${spec}`);
