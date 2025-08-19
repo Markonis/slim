@@ -1,16 +1,15 @@
 import { EventSpec } from "./types.ts";
 
-export function shouldHandleEvent(event: Event, eventSpec: EventSpec) {
+export function shouldHandleEvent(element:Element, event: Event, eventSpec: EventSpec) {
   if (eventSpec.event !== event.type) {
     return false;
   }
-
+  const target = event.target as Element;
   if (eventSpec.selector) {
-    const target = event.target as Element;
     return target.matches(eventSpec.selector);
+  } else {
+    return element.isSameNode(target);
   }
-
-  return true;
 }
 
 export function parseEventSpecs(element: Element): EventSpec[] {

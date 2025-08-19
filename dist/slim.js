@@ -125,15 +125,16 @@ function sendRequest(url, method, element) {
 }
 
 // src/event.ts
-function shouldHandleEvent(event, eventSpec) {
+function shouldHandleEvent(element, event, eventSpec) {
   if (eventSpec.event !== event.type) {
     return false;
   }
+  const target = event.target;
   if (eventSpec.selector) {
-    const target = event.target;
     return target.matches(eventSpec.selector);
+  } else {
+    return element.isSameNode(target);
   }
-  return true;
 }
 function parseEventSpecs(element) {
   const spec = element.getAttribute("s-on");
@@ -194,29 +195,39 @@ function parseOneEventSpec(spec) {
     };
     return null;
   }
-  function processElement(element, event, bubble) {
+  function queryEventHandlingElements(root = document.body) {
+    return root.querySelectorAll("[s-on]");
+  }
+  function processEvent(event) {
+    let eventObj;
+    if (typeof event === "string") {
+      eventObj = new CustomEvent(event);
+    } else {
+      eventObj = event;
+    }
+    const elements = queryEventHandlingElements();
+    for (const element of elements) {
+      processElement(element, eventObj);
+    }
+  }
+  function processElement(element, event) {
     const emit = element.getAttribute("s-emit");
     if (emit) {
       event.preventDefault();
-      broadcastEvent(emit);
+      processEvent(event);
       return;
     }
     const config = getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
-    if (config) {
-      const { url, method } = config;
-      const eventSpecs = parseEventSpecs(element);
-      for (const spec of eventSpecs) {
-        if (shouldHandleEvent(event, spec)) {
-          handleEvent(url, method, element);
-          event.preventDefault();
-          break;
-        }
-      }
-    } else {
-      if (!bubble) return;
-      const parent = element.parentElement;
-      if (parent) {
-        processElement(parent, event, true);
+    if (!config) {
+      return;
+    }
+    const { url, method } = config;
+    const eventSpecs = parseEventSpecs(element);
+    for (const spec of eventSpecs) {
+      if (shouldHandleEvent(element, event, spec)) {
+        handleEvent(url, method, element);
+        event.preventDefault();
+        break;
       }
     }
   }
@@ -232,7 +243,7 @@ function parseOneEventSpec(spec) {
             processAppearEvents(target);
           });
         } else if (result.event) {
-          broadcastEvent(result.event);
+          processEvent(result.event);
         }
       }).catch((error) => {
         console.error("Request failed:", error);
@@ -247,7 +258,7 @@ function parseOneEventSpec(spec) {
           bubbles: false,
           cancelable: true
         });
-        processElement(element, appearEvent, false);
+        processElement(element, appearEvent);
         appearObserver.unobserve(element);
       }
     }
@@ -260,7 +271,7 @@ function parseOneEventSpec(spec) {
     appearObserver = new IntersectionObserver(handleAppearIntersection, options);
   }
   function processAppearEvents(rootElement) {
-    const elements = rootElement.querySelectorAll("[s-on]");
+    const elements = queryEventHandlingElements(rootElement);
     for (const element of elements) {
       const eventSpecs = parseEventSpecs(element);
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
@@ -278,20 +289,10 @@ function parseOneEventSpec(spec) {
     ];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {
-        processElement(event.target, event, true);
+        processEvent(event);
       }, {
         capture: true
       });
-    }
-  }
-  function broadcastEvent(eventType) {
-    const elements = document.querySelectorAll(`[s-on*="${eventType}"]`);
-    for (const element of elements) {
-      const syntheticEvent = new CustomEvent(eventType, {
-        bubbles: false,
-        cancelable: true
-      });
-      processElement(element, syntheticEvent, false);
     }
   }
   function enableWebSockets() {
@@ -300,7 +301,7 @@ function parseOneEventSpec(spec) {
     const ws = new WebSocket(url);
     ws.onmessage = (event) => {
       const eventType = event.data.toString();
-      broadcastEvent(eventType);
+      processEvent(eventType);
     };
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);

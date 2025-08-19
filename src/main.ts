@@ -15,11 +15,28 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     return null;
   }
 
-  function processElement(element: Element, event: Event, bubble: boolean) {
+  function queryEventHandlingElements(root: Element = document.body) {
+    return root.querySelectorAll("[s-on]");
+  }
+
+  function processEvent(event: Event | string) {
+    let eventObj: Event;
+    if (typeof event === "string") {
+      eventObj = new CustomEvent(event);
+    } else {
+      eventObj = event;
+    }
+    const elements = queryEventHandlingElements();
+    for(const element of elements) {
+      processElement(element, eventObj);
+    }
+  }
+
+  function processElement(element: Element, event: Event) {
     const emit = element.getAttribute("s-emit");
     if (emit) {
       event.preventDefault();
-      broadcastEvent(emit);
+      processEvent(event);
       return;
     }
 
@@ -28,21 +45,15 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
       getElementConfig(element, "put") ??
       getElementConfig(element, "delete");
 
-    if (config) {
-      const { url, method } = config;
-      const eventSpecs = parseEventSpecs(element);
-      for (const spec of eventSpecs) {
-        if (shouldHandleEvent(event, spec)) {
-          handleEvent(url, method, element);
-          event.preventDefault();
-          break;
-        }
-      }
-    } else {
-      if (!bubble) return;
-      const parent = element.parentElement;
-      if (parent) {
-        processElement(parent, event, true);
+    if (!config) { return }
+    
+    const { url, method } = config;
+    const eventSpecs = parseEventSpecs(element);
+    for (const spec of eventSpecs) {
+      if (shouldHandleEvent(element, event, spec)) {
+        handleEvent(url, method, element);
+        event.preventDefault();
+        break;
       }
     }
   }
@@ -64,7 +75,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
               processAppearEvents(target);
             });
           } else if (result.event) {
-            broadcastEvent(result.event);
+            processEvent(result.event);
           }
         })
         .catch((error) => {
@@ -81,7 +92,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
           bubbles: false,
           cancelable: true,
         });
-        processElement(element, appearEvent, false);
+        processElement(element, appearEvent);
         appearObserver.unobserve(element);
       }
     }
@@ -96,8 +107,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
   }
 
   function processAppearEvents(rootElement: Element) {
-    const elements = rootElement.querySelectorAll("[s-on]");
-
+    const elements = queryEventHandlingElements(rootElement);
     for (const element of elements) {
       const eventSpecs = parseEventSpecs(element);
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
@@ -111,19 +121,8 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     const eventTypesToProcess = ["click", "change", "input", "submit"];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {
-        processElement(event.target as Element, event, true);
+        processEvent(event);
       }, { capture: true });
-    }
-  }
-
-  function broadcastEvent(eventType: string) {
-    const elements = document.querySelectorAll(`[s-on*="${eventType}"]`);
-    for (const element of elements) {
-      const syntheticEvent = new CustomEvent(eventType, {
-        bubbles: false,
-        cancelable: true,
-      });
-      processElement(element, syntheticEvent, false);
     }
   }
 
@@ -135,7 +134,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
 
     ws.onmessage = (event) => {
       const eventType = event.data.toString();
-      broadcastEvent(eventType);
+      processEvent(eventType);
     };
 
     ws.onerror = (error) => {
