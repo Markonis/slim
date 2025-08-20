@@ -1,17 +1,5 @@
 import { EventSpec } from "./types.ts";
 
-export function shouldHandleEvent(element:Element, event: Event, eventSpec: EventSpec) {
-  if (eventSpec.event !== event.type) {
-    return false;
-  }
-  const target = event.target as Element;
-  if (eventSpec.selector) {
-    return target.matches(eventSpec.selector);
-  } else {
-    return element.isSameNode(target);
-  }
-}
-
 export function parseEventSpecs(element: Element): EventSpec[] {
   const spec = element.getAttribute("s-on");
   if (!spec) return getDefaultEventSpecs(element);
@@ -29,7 +17,7 @@ function getDefaultEventSpecs(element: Element): EventSpec[] {
     case "INPUT":
       return [{ event: "change" }];
     default:
-      return [];
+      return [{ event: "appear" }];
   }
 }
 

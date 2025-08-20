@@ -34,12 +34,17 @@ function processResponse(response, element, targetSelector) {
     return Promise.resolve({
       status: response.status,
       html: null,
+      text: null,
       event: null,
       targets: []
     });
   }
+  if (!response.ok) {
+    return Promise.reject();
+  }
   const serverTargetSelector = response.headers.get("S-Target");
   const finalTargetSelector = serverTargetSelector || targetSelector;
+  const event = response.headers.get("S-Emit");
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
     const mediaType = contentType?.split(";")[0];
@@ -48,21 +53,24 @@ function processResponse(response, element, targetSelector) {
         return {
           status: response.status,
           html: text,
-          event: null,
+          text: null,
+          event,
           targets: determineTargets(element, finalTargetSelector)
         };
       case "text/plain":
         return {
           status: response.status,
           html: null,
-          event: text,
+          text,
+          event,
           targets: []
         };
       default:
         return {
           status: response.status,
           html: null,
-          event: null,
+          text: null,
+          event,
           targets: []
         };
     }
@@ -125,17 +133,6 @@ function sendRequest(url, method, element) {
 }
 
 // src/event.ts
-function shouldHandleEvent(element, event, eventSpec) {
-  if (eventSpec.event !== event.type) {
-    return false;
-  }
-  const target = event.target;
-  if (eventSpec.selector) {
-    return target.matches(eventSpec.selector);
-  } else {
-    return element.isSameNode(target);
-  }
-}
 function parseEventSpecs(element) {
   const spec = element.getAttribute("s-on");
   if (!spec) return getDefaultEventSpecs(element);
@@ -164,7 +161,11 @@ function getDefaultEventSpecs(element) {
         }
       ];
     default:
-      return [];
+      return [
+        {
+          event: "appear"
+        }
+      ];
   }
 }
 function parseOneEventSpec(spec) {
@@ -196,57 +197,96 @@ function parseOneEventSpec(spec) {
     return null;
   }
   function queryEventHandlingElements(root = document.body) {
-    return root.querySelectorAll("[s-on]");
+    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit]");
   }
-  function processEvent(event) {
-    let eventObj;
-    if (typeof event === "string") {
-      eventObj = new CustomEvent(event);
-    } else {
-      eventObj = event;
-    }
+  function broadcastEvent(eventOrType) {
+    const event = eventOrType instanceof Event ? eventOrType : new CustomEvent(eventOrType);
     const elements = queryEventHandlingElements();
+    const globalHandlers = [];
+    const localHandlers = [];
     for (const element of elements) {
-      processElement(element, eventObj);
+      const emit = element.getAttribute("s-emit");
+      const config = getAnyElementConfig(element);
+      if (!emit && !config) continue;
+      const specs = parseEventSpecs(element);
+      for (const spec of specs) {
+        if (spec.event !== event.type) continue;
+        if (spec.selector) {
+          globalHandlers.push({
+            element,
+            emit,
+            config,
+            spec
+          });
+        } else {
+          localHandlers.push({
+            element,
+            emit,
+            config,
+            spec
+          });
+        }
+      }
     }
-  }
-  function processElement(element, event) {
-    const emit = element.getAttribute("s-emit");
-    if (emit) {
-      event.preventDefault();
-      processEvent(event);
-      return;
-    }
-    const config = getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
-    if (!config) {
-      return;
-    }
-    const { url, method } = config;
-    const eventSpecs = parseEventSpecs(element);
-    for (const spec of eventSpecs) {
-      if (shouldHandleEvent(element, event, spec)) {
-        handleEvent(url, method, element);
-        event.preventDefault();
-        break;
+    if (event.target && event.target instanceof Element) {
+      let current = event.target;
+      while (current) {
+        const localHandler = localHandlers.find((handler) => handler.element.isSameNode(current));
+        if (localHandler) {
+          handleEvent(localHandler);
+        }
+        const matchingGlobalHandlers = globalHandlers.filter((handler) => current.matches(handler.spec.selector));
+        for (const globalHandler of matchingGlobalHandlers) {
+          handleEvent(globalHandler);
+        }
+        if (current.parentElement) {
+          current = current.parentElement;
+        } else {
+          break;
+        }
+      }
+    } else {
+      for (const handler of [
+        ...globalHandlers,
+        ...localHandlers
+      ]) {
+        if (handler.spec.event === event.type) {
+          handleEvent(handler);
+        }
       }
     }
   }
-  function handleEvent(url, method, element) {
-    const queryParams = collectQueryParams(element);
-    const urlWithQueryParams = appendQueryParams(url, queryParams);
+  function getAnyElementConfig(element) {
+    return getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
+  }
+  function handleEvent({ element, config, emit }) {
     const confirmMessage = element.getAttribute("s-confirm");
-    if (!confirmMessage || confirm(confirmMessage)) {
-      sendRequest(urlWithQueryParams, method, element).then((result) => {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+    const queryParams = collectQueryParams(element);
+    if (emit) {
+      broadcastEvent(emit);
+    }
+    if (config) {
+      const urlWithQueryParams = appendQueryParams(config.url, queryParams);
+      sendRequest(urlWithQueryParams, config.method, element).then((result) => {
         if (result.html !== null) {
-          result.targets.forEach((target) => {
+          for (const target of result.targets) {
             target.innerHTML = result.html;
-            processAppearEvents(target);
-          });
+            observeElementsWithAppearEvent(target);
+          }
+        } else if (result.text !== null) {
+          for (const target of result.targets) {
+            target.textContent = result.text;
+          }
         } else if (result.event) {
-          processEvent(result.event);
+          broadcastEvent(result.event);
         }
+        element.dispatchEvent(new CustomEvent("slim:ok"));
       }).catch((error) => {
         console.error("Request failed:", error);
+        element.dispatchEvent(new CustomEvent("slim:error"));
+      }).finally(() => {
+        element.dispatchEvent(new CustomEvent("slim:done"));
       });
     }
   }
@@ -254,11 +294,7 @@ function parseOneEventSpec(spec) {
     for (const entry of entries) {
       if (entry.isIntersecting) {
         const element = entry.target;
-        const appearEvent = new CustomEvent("appear", {
-          bubbles: false,
-          cancelable: true
-        });
-        processElement(element, appearEvent);
+        element.dispatchEvent(new CustomEvent("appear"));
         appearObserver.unobserve(element);
       }
     }
@@ -270,7 +306,7 @@ function parseOneEventSpec(spec) {
     };
     appearObserver = new IntersectionObserver(handleAppearIntersection, options);
   }
-  function processAppearEvents(rootElement) {
+  function observeElementsWithAppearEvent(rootElement) {
     const elements = queryEventHandlingElements(rootElement);
     for (const element of elements) {
       const eventSpecs = parseEventSpecs(element);
@@ -285,11 +321,13 @@ function parseOneEventSpec(spec) {
       "click",
       "change",
       "input",
-      "submit"
+      "submit",
+      "appear"
     ];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {
-        processEvent(event);
+        if (event.type === "submit") event.preventDefault();
+        broadcastEvent(event);
       }, {
         capture: true
       });
@@ -301,7 +339,7 @@ function parseOneEventSpec(spec) {
     const ws = new WebSocket(url);
     ws.onmessage = (event) => {
       const eventType = event.data.toString();
-      processEvent(eventType);
+      broadcastEvent(eventType);
     };
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
@@ -314,6 +352,6 @@ function parseOneEventSpec(spec) {
     initializeAppearObserver();
     registerEventHandlers();
     enableWebSockets();
-    processAppearEvents(document.body);
+    observeElementsWithAppearEvent(document.body);
   });
 })();

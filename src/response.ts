@@ -10,13 +10,19 @@ export function processResponse(
     return Promise.resolve({
       status: response.status,
       html: null,
+      text: null,
       event: null,
       targets: [],
     });
   }
 
+  if (!response.ok) {
+    return Promise.reject();
+  }
+
   const serverTargetSelector = response.headers.get("S-Target");
   const finalTargetSelector = serverTargetSelector || targetSelector;
+  const event = response.headers.get("S-Emit");
 
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
@@ -26,21 +32,24 @@ export function processResponse(
         return {
           status: response.status,
           html: text,
-          event: null,
+          text: null,
+          event,
           targets: determineTargets(element, finalTargetSelector),
         };
       case "text/plain":
         return {
           status: response.status,
           html: null,
-          event: text,
+          text: text,
+          event,
           targets: [],
         };
       default:
         return {
           status: response.status,
           html: null,
-          event: null,
+          text: null,
+          event,
           targets: [],
         };
     }

@@ -1,7 +1,7 @@
 import { appendQueryParams, collectQueryParams } from "./query.ts";
-import { ElementConfig } from "./types.ts";
+import { EventHandler, RequestConfig } from "./types.ts";
 import { sendRequest } from "./request.ts";
-import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
+import { parseEventSpecs } from "./event.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
@@ -9,78 +9,116 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
   function getElementConfig(
     element: Element,
     method: string,
-  ): ElementConfig | null {
+  ): RequestConfig | null {
     const url = element.getAttribute(`s-${method}`);
     if (url) return { url, method };
     return null;
   }
 
   function queryEventHandlingElements(root: Element = document.body) {
-    return root.querySelectorAll("[s-on]");
+    return root.querySelectorAll(
+      "[s-get],[s-post],[s-put],[s-delete],[s-emit]",
+    );
   }
 
-  function processEvent(event: Event | string) {
-    let eventObj: Event;
-    if (typeof event === "string") {
-      eventObj = new CustomEvent(event);
-    } else {
-      eventObj = event;
-    }
+  function broadcastEvent(eventOrType: Event | string) {
+    const event = eventOrType instanceof Event
+      ? eventOrType
+      : new CustomEvent(eventOrType);
+
     const elements = queryEventHandlingElements();
-    for(const element of elements) {
-      processElement(element, eventObj);
+    const globalHandlers: EventHandler[] = [];
+    const localHandlers: EventHandler[] = [];
+
+    for (const element of elements) {
+      const emit = element.getAttribute("s-emit");
+      const config = getAnyElementConfig(element);
+      if (!emit && !config) continue;
+
+      const specs = parseEventSpecs(element);
+      for (const spec of specs) {
+        if (spec.event !== event.type) continue;
+        if (spec.selector) {
+          globalHandlers.push({ element, emit, config, spec });
+        } else {
+          localHandlers.push({ element, emit, config, spec });
+        }
+      }
     }
-  }
 
-  function processElement(element: Element, event: Event) {
-    const emit = element.getAttribute("s-emit");
-    if (emit) {
-      event.preventDefault();
-      processEvent(event);
-      return;
-    }
+    if (event.target && event.target instanceof Element) { // User interaction event
+      let current: Element = event.target;
+      while (current) {
+        const localHandler = localHandlers
+          .find((handler) => handler.element.isSameNode(current));
 
-    const config = getElementConfig(element, "get") ??
-      getElementConfig(element, "post") ??
-      getElementConfig(element, "put") ??
-      getElementConfig(element, "delete");
+        if (localHandler) {
+          handleEvent(localHandler);
+        }
 
-    if (!config) { return }
-    
-    const { url, method } = config;
-    const eventSpecs = parseEventSpecs(element);
-    for (const spec of eventSpecs) {
-      if (shouldHandleEvent(element, event, spec)) {
-        handleEvent(url, method, element);
-        event.preventDefault();
-        break;
+        const matchingGlobalHandlers = globalHandlers
+          .filter((handler) => current.matches(handler.spec.selector!));
+
+        for (const globalHandler of matchingGlobalHandlers) {
+          handleEvent(globalHandler);
+        }
+
+        if (current.parentElement) {
+          current = current.parentElement;
+        } else {
+          break;
+        }
+      }
+    } else { // Globally broadcasted event
+      for (const handler of [...globalHandlers, ...localHandlers]) {
+        if (handler.spec.event === event.type) {
+          handleEvent(handler);
+        }
       }
     }
   }
 
-  function handleEvent(
-    url: string,
-    method: string,
-    element: Element,
-  ) {
-    const queryParams = collectQueryParams(element);
-    const urlWithQueryParams = appendQueryParams(url, queryParams);
+  function getAnyElementConfig(element: Element) {
+    return getElementConfig(element, "get") ??
+      getElementConfig(element, "post") ??
+      getElementConfig(element, "put") ??
+      getElementConfig(element, "delete");
+  }
+
+  function handleEvent({ element, config, emit }: EventHandler) {
     const confirmMessage = element.getAttribute("s-confirm");
-    if (!confirmMessage || confirm(confirmMessage)) {
-      sendRequest(urlWithQueryParams, method, element)
+    if (confirmMessage && !confirm(confirmMessage)) return;
+
+    const queryParams = collectQueryParams(element);
+    if (emit) {
+      broadcastEvent(emit);
+    }
+
+    if (config) {
+      const urlWithQueryParams = appendQueryParams(config.url, queryParams);
+      sendRequest(urlWithQueryParams, config.method, element)
         .then((result) => {
           if (result.html !== null) {
-            result.targets.forEach((target) => {
+            for (const target of result.targets) {
               target.innerHTML = result.html!;
-              processAppearEvents(target);
-            });
+              observeElementsWithAppearEvent(target);
+            }
+          } else if (result.text !== null) {
+            for (const target of result.targets) {
+              target.textContent = result.text;
+            }
           } else if (result.event) {
-            processEvent(result.event);
+            broadcastEvent(result.event);
           }
+          element.dispatchEvent(new CustomEvent("slim:ok"));
         })
         .catch((error) => {
           console.error("Request failed:", error);
-        });
+          element.dispatchEvent(new CustomEvent("slim:error"));
+        })
+        .finally(() => {
+          element.dispatchEvent(new CustomEvent("slim:done"));
+        })
     }
   }
 
@@ -88,11 +126,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     for (const entry of entries) {
       if (entry.isIntersecting) {
         const element = entry.target as Element;
-        const appearEvent = new CustomEvent("appear", {
-          bubbles: false,
-          cancelable: true,
-        });
-        processElement(element, appearEvent);
+        element.dispatchEvent(new CustomEvent("appear"));
         appearObserver.unobserve(element);
       }
     }
@@ -106,7 +140,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     );
   }
 
-  function processAppearEvents(rootElement: Element) {
+  function observeElementsWithAppearEvent(rootElement: Element) {
     const elements = queryEventHandlingElements(rootElement);
     for (const element of elements) {
       const eventSpecs = parseEventSpecs(element);
@@ -118,10 +152,17 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
   }
 
   function registerEventHandlers() {
-    const eventTypesToProcess = ["click", "change", "input", "submit"];
+    const eventTypesToProcess = [
+      "click",
+      "change",
+      "input",
+      "submit",
+      "appear"
+    ];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {
-        processEvent(event);
+        if (event.type === "submit") event.preventDefault();
+        broadcastEvent(event);
       }, { capture: true });
     }
   }
@@ -134,7 +175,7 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
 
     ws.onmessage = (event) => {
       const eventType = event.data.toString();
-      processEvent(eventType);
+      broadcastEvent(eventType);
     };
 
     ws.onerror = (error) => {
@@ -150,6 +191,6 @@ import { parseEventSpecs, shouldHandleEvent } from "./event.ts";
     initializeAppearObserver();
     registerEventHandlers();
     enableWebSockets();
-    processAppearEvents(document.body);
+    observeElementsWithAppearEvent(document.body);
   });
 })();
