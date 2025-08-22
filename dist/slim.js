@@ -333,7 +333,7 @@ function parseOneEventSpec(spec) {
       });
     }
   }
-  function enableWebSockets() {
+  function createWebSocket(handleError) {
     const url = document.body.getAttribute("s-ws");
     if (!url) return;
     const ws = new WebSocket(url);
@@ -342,16 +342,19 @@ function parseOneEventSpec(spec) {
       broadcastEvent(eventType);
     };
     ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      console.warn("WebSocket error:", error);
+      handleError();
     };
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
+  }
+  function initWebSockets() {
+    createWebSocket(() => {
+      setTimeout(() => initWebSockets(), 1e3);
+    });
   }
   document.addEventListener("DOMContentLoaded", () => {
     initializeAppearObserver();
     registerEventHandlers();
-    enableWebSockets();
+    initWebSockets();
     observeElementsWithAppearEvent(document.body);
   });
 })();

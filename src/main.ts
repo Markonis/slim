@@ -167,7 +167,7 @@ import { parseEventSpecs } from "./event.ts";
     }
   }
 
-  function enableWebSockets() {
+  function createWebSocket(handleError: () => void) {
     const url = document.body.getAttribute("s-ws");
     if (!url) return;
 
@@ -177,20 +177,23 @@ import { parseEventSpecs } from "./event.ts";
       const eventType = event.data.toString();
       broadcastEvent(eventType);
     };
-
+    
     ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      console.warn("WebSocket error:", error);
+      handleError();
     };
+  }
 
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
+  function initWebSockets() {
+    createWebSocket(() => {
+      setTimeout(() => initWebSockets(), 1000);
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
     initializeAppearObserver();
     registerEventHandlers();
-    enableWebSockets();
+    initWebSockets();
     observeElementsWithAppearEvent(document.body);
   });
 })();
