@@ -90,7 +90,7 @@ Add interactive behavior with attributes:
 ### Lazy Loading
 
 ```html
-<div s-on="appear" s-get="/api/lazy-content" s-target="self">
+<div s-on="appear" s-get="/api/lazy-content">
   Content loads when scrolled into view
 </div>
 ```
@@ -133,7 +133,7 @@ Elements have default events when `s-on` is not specified:
 
 Slim recognizes special response headers:
 
-- `S-Target: selector` - Override client-side target
+- `S-Target: selector` - Override client-side target (optional, the default target is the element itself)
 - `S-Emit: event-name` - Broadcast event after processing
 - `S-Refresh: true` - Force page reload
 
