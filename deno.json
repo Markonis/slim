@@ -3,7 +3,7 @@
   "tasks": {
     "commit": "deno task build && git add . && git commit",
     "build": "deno bundle src/main.ts > dist/slim.js && deno bundle --minify src/main.ts > dist/slim.min.js",
-    "server": "deno run --allow-all --watch --unstable-raw-imports server.ts"
+    "server": "deno run --allow-all --watch --unstable-raw-imports src/server.ts"
   },
   "imports": {
     "@hono/hono": "jsr:@hono/hono@^4.9.2",
