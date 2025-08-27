@@ -27,6 +27,7 @@ export function processResponse(
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
     const mediaType = contentType?.split(";")[0];
+    const targets = determineTargets(element, finalTargetSelector);
     switch (mediaType) {
       case "text/html":
         return {
@@ -34,7 +35,7 @@ export function processResponse(
           html: text,
           text: null,
           event,
-          targets: determineTargets(element, finalTargetSelector),
+          targets,
         };
       case "text/plain":
         return {
@@ -42,7 +43,7 @@ export function processResponse(
           html: null,
           text: text,
           event,
-          targets: [],
+          targets,
         };
       default:
         return {
