@@ -112,9 +112,11 @@ function itemView(item: TodoItem) {
         class="form-control"
       >
       <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="done" ${
-    item.done ? "checked" : ""
-  }>
+        <input 
+          class="form-check-input" 
+          type="checkbox" 
+          name="done" ${item.done ? "checked" : ""}
+        >
       </div>
     </form>
   `;
