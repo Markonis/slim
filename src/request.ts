@@ -46,6 +46,7 @@ function sendFormRequest(
 }
 
 export function sendRequest(
+  event: Event,
   url: string,
   method: string,
   element: Element,
@@ -54,7 +55,18 @@ export function sendRequest(
   if (element instanceof HTMLFormElement) {
     return sendFormRequest(url, method, element, targetSelector);
   } else {
-    return fetch(url, { method })
+    const headers: Record<string, string> = {};
+    let body: string | undefined;
+
+    if (event instanceof DragEvent) {
+      const json = event.dataTransfer?.getData("application/json");
+      if (json) {
+        headers["Content-Type"] = "application/json";
+        body = json;
+      }
+    }
+
+    return fetch(url, { method, headers, body })
       .then((response) => processResponse(response, element, targetSelector));
   }
 }

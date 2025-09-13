@@ -122,13 +122,24 @@ function sendFormRequest(url, method, element, targetSelector) {
   }
   return fetch(finalUrl, fetchOptions).then((response) => processResponse(response, element, targetSelector));
 }
-function sendRequest(url, method, element) {
+function sendRequest(event, url, method, element) {
   const targetSelector = element.getAttribute("s-target");
   if (element instanceof HTMLFormElement) {
     return sendFormRequest(url, method, element, targetSelector);
   } else {
+    const headers = {};
+    let body;
+    if (event instanceof DragEvent) {
+      const json = event.dataTransfer?.getData("application/json");
+      if (json) {
+        headers["Content-Type"] = "application/json";
+        body = json;
+      }
+    }
     return fetch(url, {
-      method
+      method,
+      headers,
+      body
     }).then((response) => processResponse(response, element, targetSelector));
   }
 }
@@ -186,6 +197,33 @@ function parseOneEventSpec(spec) {
   }
 }
 
+// src/dnd.ts
+function handleDragEvents(element, event) {
+  if (!(event instanceof DragEvent) || !event.dataTransfer) return;
+  if (event.type === "dragstart") {
+    const dragJSON = element.getAttribute("s-drag-json");
+    const dragEffect = element.getAttribute("s-drag-effect");
+    if (dragJSON) {
+      event.dataTransfer.setData("application/json", dragJSON);
+    }
+    if (dragEffect) {
+      event.dataTransfer.effectAllowed = dragEffect;
+    }
+  }
+  const dropClass = element.getAttribute("s-drop-class");
+  const dropEffect = element.getAttribute("s-drop-effect");
+  if (event.type === "dragover") {
+    if (!dropEffect) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect === dropEffect;
+    if (dropClass) {
+      element.classList.add(dropClass);
+    }
+  } else if (event.type === "dragleave" && dropClass) {
+    element.classList.remove(dropClass);
+  }
+}
+
 // src/main.ts
 (function() {
   let appearObserver;
@@ -214,6 +252,7 @@ function parseOneEventSpec(spec) {
         if (spec.event !== event.type) continue;
         if (spec.selector) {
           globalHandlers.push({
+            event,
             element,
             emit,
             config,
@@ -221,6 +260,7 @@ function parseOneEventSpec(spec) {
           });
         } else {
           localHandlers.push({
+            event,
             element,
             emit,
             config,
@@ -231,6 +271,7 @@ function parseOneEventSpec(spec) {
     }
     if (event.target && event.target instanceof Element) {
       let current = event.target;
+      handleDragEvents(current, event);
       while (current) {
         const localHandler = localHandlers.find((handler) => handler.element.isSameNode(current));
         if (localHandler) {
@@ -260,7 +301,7 @@ function parseOneEventSpec(spec) {
   function getAnyElementConfig(element) {
     return getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
   }
-  function handleEvent({ element, config, emit }) {
+  function handleEvent({ event, element, config, emit }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
     const queryParams = collectQueryParams(element);
@@ -269,7 +310,7 @@ function parseOneEventSpec(spec) {
     }
     if (config) {
       const urlWithQueryParams = appendQueryParams(config.url, queryParams);
-      sendRequest(urlWithQueryParams, config.method, element).then((result) => {
+      sendRequest(event, urlWithQueryParams, config.method, element).then((result) => {
         if (result.html !== null) {
           for (const target of result.targets) {
             target.innerHTML = result.html;
@@ -323,7 +364,11 @@ function parseOneEventSpec(spec) {
       "change",
       "input",
       "submit",
-      "appear"
+      "appear",
+      "dragstart",
+      "dragover",
+      "dragleave",
+      "drop"
     ];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {

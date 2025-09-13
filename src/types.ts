@@ -22,6 +22,7 @@ export type RequestConfig = {
 };
 
 export type EventHandler = {
+  event: Event;
   element: Element;
   emit: string | null;
   config: RequestConfig | null;

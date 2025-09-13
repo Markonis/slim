@@ -2,6 +2,7 @@ import { appendQueryParams, collectQueryParams } from "./query.ts";
 import { EventHandler, RequestConfig } from "./types.ts";
 import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
+import { handleDragEvents } from "./dnd.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
@@ -39,15 +40,17 @@ import { parseEventSpecs } from "./event.ts";
       for (const spec of specs) {
         if (spec.event !== event.type) continue;
         if (spec.selector) {
-          globalHandlers.push({ element, emit, config, spec });
+          globalHandlers.push({ event, element, emit, config, spec });
         } else {
-          localHandlers.push({ element, emit, config, spec });
+          localHandlers.push({ event, element, emit, config, spec });
         }
       }
     }
 
     if (event.target && event.target instanceof Element) { // User interaction event
       let current: Element = event.target;
+      handleDragEvents(current, event);
+
       while (current) {
         const localHandler = localHandlers
           .find((handler) => handler.element.isSameNode(current));
@@ -85,7 +88,9 @@ import { parseEventSpecs } from "./event.ts";
       getElementConfig(element, "delete");
   }
 
-  function handleEvent({ element, config, emit }: EventHandler) {
+  
+
+  function handleEvent({ event, element, config, emit }: EventHandler) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
 
@@ -96,7 +101,7 @@ import { parseEventSpecs } from "./event.ts";
 
     if (config) {
       const urlWithQueryParams = appendQueryParams(config.url, queryParams);
-      sendRequest(urlWithQueryParams, config.method, element)
+      sendRequest(event, urlWithQueryParams, config.method, element)
         .then((result) => {
           if (result.html !== null) {
             for (const target of result.targets) {
@@ -157,7 +162,11 @@ import { parseEventSpecs } from "./event.ts";
       "change",
       "input",
       "submit",
-      "appear"
+      "appear",
+      "dragstart",
+      "dragover",
+      "dragleave",
+      "drop"
     ];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {
