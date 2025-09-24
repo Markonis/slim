@@ -1,5 +1,5 @@
 {
-  "version": "1.9.1",
+  "version": "1.10.0",
   "tasks": {
     "commit": "deno task build && git add . && git commit",
     "build": "deno bundle src/main.ts > dist/slim.js && deno bundle --minify src/main.ts > dist/slim.min.js",
