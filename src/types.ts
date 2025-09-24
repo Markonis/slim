@@ -24,7 +24,12 @@ export type RequestConfig = {
 export type EventHandler = {
   event: Event;
   element: Element;
-  emit: string | null;
+  emit: EmitSpec | null;
   config: RequestConfig | null;
   spec: EventSpec;
+};
+
+export type EmitSpec = {
+  event: string;
+  delay: number;
 };

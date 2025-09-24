@@ -1,8 +1,9 @@
 import { appendQueryParams, collectQueryParams } from "./query.ts";
-import { EventHandler, RequestConfig } from "./types.ts";
+import { EmitSpec, EventHandler, RequestConfig } from "./types.ts";
 import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
 import { handleDragEvents } from "./dnd.ts";
+import { getEmitSpec } from "./emit.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
@@ -32,7 +33,7 @@ import { handleDragEvents } from "./dnd.ts";
     const localHandlers: EventHandler[] = [];
 
     for (const element of elements) {
-      const emit = element.getAttribute("s-emit");
+      const emit = getEmitSpec(element);
       const config = getAnyElementConfig(element);
       if (!emit && !config) continue;
 
@@ -98,7 +99,7 @@ import { handleDragEvents } from "./dnd.ts";
 
     const queryParams = collectQueryParams(element);
     if (emit) {
-      broadcastEvent(emit);
+      handleEmit(element, emit);
     }
 
     if (config) {
@@ -126,6 +127,20 @@ import { handleDragEvents } from "./dnd.ts";
         .finally(() => {
           element.dispatchEvent(new CustomEvent("slim:done"));
         });
+    }
+  }
+
+  function handleEmit(element: Element, emit: EmitSpec) {
+    if (!emit.delay) {
+      broadcastEvent(emit.event);
+    } else {
+      setTimeout(
+        () => {
+          if (!element.parentElement) return;
+          broadcastEvent(emit.event);
+        },
+        emit.delay,
+      );
     }
   }
 

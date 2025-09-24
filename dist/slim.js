@@ -224,6 +224,29 @@ function handleDragEvents(element, event) {
   }
 }
 
+// src/emit.ts
+function getEmitSpec(element) {
+  const emitStr = element.getAttribute("s-emit");
+  if (!emitStr) return null;
+  const parts = emitStr.split(/\s+after\s/);
+  if (parts.length === 2) {
+    const event = parts[0];
+    let delay = parseFloat(parts[1]);
+    if (!event || isNaN(delay)) return null;
+    if (parts[1].endsWith("s")) delay *= 1e3;
+    delay = Math.round(delay);
+    return {
+      event,
+      delay
+    };
+  } else {
+    return {
+      event: parts[0],
+      delay: 0
+    };
+  }
+}
+
 // src/main.ts
 (function() {
   let appearObserver;
@@ -244,7 +267,7 @@ function handleDragEvents(element, event) {
     const globalHandlers = [];
     const localHandlers = [];
     for (const element of elements) {
-      const emit = element.getAttribute("s-emit");
+      const emit = getEmitSpec(element);
       const config = getAnyElementConfig(element);
       if (!emit && !config) continue;
       const specs = parseEventSpecs(element);
@@ -309,7 +332,7 @@ function handleDragEvents(element, event) {
     if (confirmMessage && !confirm(confirmMessage)) return;
     const queryParams = collectQueryParams(element);
     if (emit) {
-      broadcastEvent(emit);
+      handleEmit(element, emit);
     }
     if (config) {
       const urlWithQueryParams = appendQueryParams(config.url, queryParams);
@@ -333,6 +356,16 @@ function handleDragEvents(element, event) {
       }).finally(() => {
         element.dispatchEvent(new CustomEvent("slim:done"));
       });
+    }
+  }
+  function handleEmit(element, emit) {
+    if (!emit.delay) {
+      broadcastEvent(emit.event);
+    } else {
+      setTimeout(() => {
+        if (!element.parentElement) return;
+        broadcastEvent(emit.event);
+      }, emit.delay);
     }
   }
   function handleAppearIntersection(entries) {
