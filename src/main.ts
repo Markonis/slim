@@ -66,6 +66,10 @@ import { handleDragEvents } from "./dnd.ts";
           handleEvent(globalHandler);
         }
 
+        if (event.type === "appear") {
+          break;
+        }
+
         if (current.parentElement) {
           current = current.parentElement;
         } else {
@@ -87,8 +91,6 @@ import { handleDragEvents } from "./dnd.ts";
       getElementConfig(element, "put") ??
       getElementConfig(element, "delete");
   }
-
-  
 
   function handleEvent({ event, element, config, emit }: EventHandler) {
     const confirmMessage = element.getAttribute("s-confirm");
@@ -123,7 +125,7 @@ import { handleDragEvents } from "./dnd.ts";
         })
         .finally(() => {
           element.dispatchEvent(new CustomEvent("slim:done"));
-        })
+        });
     }
   }
 
@@ -131,7 +133,7 @@ import { handleDragEvents } from "./dnd.ts";
     for (const entry of entries) {
       if (entry.isIntersecting) {
         const element = entry.target as Element;
-        element.dispatchEvent(new CustomEvent("appear"));
+        element.dispatchEvent(new CustomEvent("appear", { bubbles: false }));
         appearObserver.unobserve(element);
       }
     }
@@ -166,7 +168,7 @@ import { handleDragEvents } from "./dnd.ts";
       "dragstart",
       "dragover",
       "dragleave",
-      "drop"
+      "drop",
     ];
     for (const eventType of eventTypesToProcess) {
       document.body.addEventListener(eventType, (event) => {
@@ -186,7 +188,7 @@ import { handleDragEvents } from "./dnd.ts";
       const eventType = event.data.toString();
       broadcastEvent(eventType);
     };
-    
+
     ws.onerror = (error) => {
       console.warn("WebSocket error:", error);
       handleError();

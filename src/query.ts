@@ -21,7 +21,10 @@ export function collectQueryParams(element: Element): URLSearchParams {
   return params;
 }
 
-export function appendQueryParams(url: string, params: URLSearchParams): string {
+export function appendQueryParams(
+  url: string,
+  params: URLSearchParams,
+): string {
   if (params.toString() === "") {
     return url;
   }

@@ -27,4 +27,4 @@ export type EventHandler = {
   emit: string | null;
   config: RequestConfig | null;
   spec: EventSpec;
-}
+};

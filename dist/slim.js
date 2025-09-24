@@ -281,6 +281,9 @@ function handleDragEvents(element, event) {
         for (const globalHandler of matchingGlobalHandlers) {
           handleEvent(globalHandler);
         }
+        if (event.type === "appear") {
+          break;
+        }
         if (current.parentElement) {
           current = current.parentElement;
         } else {
@@ -336,7 +339,9 @@ function handleDragEvents(element, event) {
     for (const entry of entries) {
       if (entry.isIntersecting) {
         const element = entry.target;
-        element.dispatchEvent(new CustomEvent("appear"));
+        element.dispatchEvent(new CustomEvent("appear", {
+          bubbles: false
+        }));
         appearObserver.unobserve(element);
       }
     }
