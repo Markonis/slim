@@ -97,12 +97,12 @@ import { getEmitSpec } from "./emit.ts";
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
 
-    const queryParams = collectQueryParams(element);
     if (emit) {
       handleEmit(element, emit);
     }
 
     if (config) {
+      const queryParams = collectQueryParams(element);
       const urlWithQueryParams = appendQueryParams(config.url, queryParams);
       sendRequest(event, urlWithQueryParams, config.method, element)
         .then((result) => {

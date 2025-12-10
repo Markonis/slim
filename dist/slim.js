@@ -14,7 +14,24 @@ function collectQueryParams(element) {
       ancestorParams.forEach((value, key) => params.set(key, value));
     }
   }
+  if (element instanceof HTMLFormElement) return params;
+  const children = Array.from(element.querySelectorAll("input, select, textarea")).reverse();
+  for (const child of children) {
+    const name = child.getAttribute("name") ?? child.id;
+    if (!name) continue;
+    const value = getElementValue(child);
+    if (!value) continue;
+    params.set(name, child.value);
+  }
+  const elementName = element.getAttribute("name") ?? element.id;
+  if (elementName) {
+    const value = getElementValue(element);
+    if (value) params.set(elementName, value);
+  }
   return params;
+}
+function getElementValue(element) {
+  return "value" in element ? element.value : "";
 }
 function appendQueryParams(url, params) {
   if (params.toString() === "") {
@@ -330,11 +347,11 @@ function getEmitSpec(element) {
   function handleEvent({ event, element, config, emit }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
-    const queryParams = collectQueryParams(element);
     if (emit) {
       handleEmit(element, emit);
     }
     if (config) {
+      const queryParams = collectQueryParams(element);
       const urlWithQueryParams = appendQueryParams(config.url, queryParams);
       sendRequest(event, urlWithQueryParams, config.method, element).then((result) => {
         if (result.html !== null) {

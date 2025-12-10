@@ -1,3 +1,5 @@
+type FormChild = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
 export function collectQueryParams(element: Element): URLSearchParams {
   const params = new URLSearchParams();
   let currentElement: Element | null = element;
@@ -18,7 +20,32 @@ export function collectQueryParams(element: Element): URLSearchParams {
     }
   }
 
+  if (element instanceof HTMLFormElement) return params;
+
+  // Collect form values in children
+  const children = Array.from(element
+    .querySelectorAll<FormChild>("input, select, textarea")).reverse();
+
+  for (const child of children) {
+    const name = child.getAttribute("name") ?? child.id;
+    if (!name) continue;
+
+    const value = getElementValue(child);
+    if (!value) continue;
+    params.set(name, child.value);
+  }
+
+  const elementName = element.getAttribute("name") ?? element.id;
+  if (elementName) {
+    const value = getElementValue(element);
+    if (value) params.set(elementName, value as string);
+  }
+
   return params;
+}
+
+function getElementValue(element: Element): string {
+  return "value" in element ? element.value as string : "";
 }
 
 export function appendQueryParams(
