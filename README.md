@@ -6,12 +6,13 @@ A lightweight, declarative frontend framework that brings server-driven interact
 
 - **Declarative HTML attributes** - Define behavior directly in your markup
 - **HTTP method support** - GET, POST, PUT, DELETE requests via attributes
-- **Event-driven architecture** - Custom events for component communication
-- **Real-time updates** - WebSocket support for live data
-- **Intersection Observer** - Lazy loading with `appear` events
-- **Form handling** - Automatic form serialization and submission
-- **Target selectors** - Update specific elements with responses
-- **Query parameter inheritance** - Hierarchical parameter collection
+- **Event-driven architecture** - Custom events, event delegation, multiple listeners
+- **Form handling** - Automatic serialization, file uploads, GET/POST/PUT/DELETE
+- **Drag and drop** - Native DnD with JSON data transfer
+- **Lazy loading** - Intersection Observer with `appear` events
+- **Real-time updates** - WebSocket support with auto-reconnect
+- **Query parameters** - Hierarchical collection with inheritance
+- **Response control** - Server headers override client targets and emit events
 - **Zero dependencies** - Pure JavaScript, no external libraries
 
 ## Quick Start
@@ -33,169 +34,180 @@ Add interactive behavior with attributes:
 
 ### HTTP Requests
 
-- `s-get="/path"` - Make GET request
-- `s-post="/path"` - Make POST request  
-- `s-put="/path"` - Make PUT request
-- `s-delete="/path"` - Make DELETE request
+- `s-get="/path"` - GET request
+- `s-post="/path"` - POST request
+- `s-put="/path"` - PUT request
+- `s-delete="/path"` - DELETE request
+
+Form data becomes query params for GET, FormData body for others. File uploads supported.
 
 ### Event Handling
 
-- `s-on="event"` - Listen for specific events
-- `s-on="event | other-event"` - Listen for multiple events
-- `s-on="event on .selector"` - Global event delegation
+- `s-on="event"` - Listen for an event
+- `s-on="event1 | event2"` - Multiple listeners
+- `s-on="click on .selector"` - Event delegation
 
 ### Targeting
 
-- `s-target="#selector"` - Update elements matching selector
-- Server can override with `S-Target` header
+- `s-target="#selector"` - Update matched elements (default: self)
+- Server override: `S-Target: selector` header
+
+### Emitting & Delays
+
+- `s-emit="event-name"` - Broadcast custom event
+- `s-emit="event after 1.5s"` - Delayed event
 
 ### Other Attributes
 
-- `s-emit="event-name"` - Broadcast custom event
-- `s-confirm="message"` - Show confirmation dialog
+- `s-confirm="message"` - Confirmation dialog
 - `s-query="key=value"` - Add query parameters
-- `s-ws="/websocket"` - WebSocket connection URL
+- `s-ws="/websocket"` - WebSocket URL
+
+### Drag & Drop
+
+- `s-drag-json="{...}"` - JSON data on dragstart
+- `s-drag-effect="copy"` - Drag effect (copy, move, link)
+- `s-drop-effect="copy"` - Drop effect (enables dragover)
+- `s-drop-class="active"` - Class added during dragover
 
 ## Examples
 
-### Basic Button Click
+### Basic Request
 
 ```html
-<button s-get="/api/counter" s-target="#count">
-  Get Count
-</button>
-<span id="count">0</span>
+<button s-get="/api/count">Get Count</button>
 ```
 
 ### Form Submission
 
 ```html
-<form s-post="/api/users" s-target="#message">
-  <input name="name" placeholder="Name" required>
-  <input name="email" placeholder="Email" required>
-  <button type="submit">Create User</button>
+<form s-post="/api/users">
+  <input name="name" required>
+  <button type="submit">Create</button>
 </form>
-<div id="message"></div>
 ```
 
-### Event Chaining
+### Event Chain
 
 ```html
-<button s-emit="data-updated">Refresh Data</button>
-<div s-on="data-updated" s-get="/api/fresh-data" s-target="#content">
-  <div id="content">Loading...</div>
-</div>
+<button s-emit="refresh">Refresh</button>
+<div s-on="refresh" s-get="/api/data" s-target="#result"></div>
 ```
 
-### Lazy Loading
+### Lazy Load
 
 ```html
-<div s-on="appear" s-get="/api/lazy-content">
-  Content loads when scrolled into view
-</div>
+<div s-on="appear" s-get="/api/lazy-content"></div>
 ```
 
-### Query Parameters
+### Query Params
 
 ```html
-<body s-query="version=1">
-  <div s-query="user=123">
-    <button s-get="/api/data" s-target="#result">
-      <!-- Request will include: ?version=1&user=123 -->
-    </button>
-  </div>
+<body s-query="v=1">
+  <button s-get="/api/data">
+    <!-- Sends ?v=1 -->
+  </button>
 </body>
 ```
 
-### WebSocket Integration
-
-Every WebSocket message is treated as a global event
+### WebSocket
 
 ```html
 <body s-ws="/ws">
-  <div s-on="user-joined" s-get="/api/users" s-target="#user-list">
-    <ul id="user-list"></ul>
-  </div>
+  <div s-on="user-joined" s-get="/api/users" s-target="#list"></div>
 </body>
 ```
 
+### Drag & Drop
+
+```html
+<div draggable s-drag-json='{"id":"123"}' s-on="dragstart"></div>
+<div s-on="drop" s-post="/api/move" s-drop-effect="move"></div>
+```
+
+### Delegation
+
+```html
+<div s-on="click on .item">
+  <button class="item">Item 1</button>
+  <button class="item">Item 2</button>
+</div>
+```
+
+### Confirmation
+
+```html
+<button s-confirm="Delete?" s-delete="/api/item"></button>
+```
 
 ## Default Event Bindings
 
-Elements have default events when `s-on` is not specified:
+Elements trigger requests automatically when `s-on` is not specified:
 
 - `<form>` → `submit`
-- `<button>` → `click` 
-- `<input>`, `<select>` → `change`
+- `<button>` → `click`
+- `<input type="text">`, `<select>` → `change` (also `input`)
 - Other elements → `appear`
 
 ## Server Response Headers
 
-Slim recognizes special response headers:
+- `S-Target: selector` - Override update target
+- `S-Emit: event-name` - Broadcast event after update
+- `S-Refresh: true` - Reload page
 
-- `S-Target: selector` - Override client-side target (optional, the default target is the element itself)
-- `S-Emit: event-name` - Broadcast event after processing
-- `S-Refresh: true` - Force page reload
+## Response Content Types
 
-## Content Types
+- `text/html` - Sets target's `innerHTML`
+- `text/plain` - Sets target's `textContent`
+- Other types - Process headers only
 
-- `text/html` - Updates target element's `innerHTML`
-- `text/plain` - Updates target element's `textContent`
-- Other types - Only processes headers
+## Custom Events Dispatched
 
-## Custom Events
-
-Slim dispatches events on elements:
+Slim dispatches on request elements:
 
 - `slim:ok` - Request succeeded
-- `slim:error` - Request failed  
-- `slim:done` - Request completed (always)
+- `slim:error` - Request failed
+- `slim:done` - Request completed
 
-## Event Delegation
+## Request Data
 
-Use selectors for global event handling:
+### GET Requests
+- Form data → query parameters
+- Query params from `s-query` attributes (hierarchical)
+- File inputs skipped
 
-```html
-<!-- Listen for clicks on any .delete-btn -->
-<div s-on="click on .delete-btn" s-delete="/api/items" s-target="#list">
-  <ul id="list">
-    <li>Item 1 <button class="delete-btn">×</button></li>
-    <li>Item 2 <button class="delete-btn">×</button></li>
-  </ul>
-</div>
-```
+### POST/PUT/DELETE Requests
+- Form data → FormData body
+- Drag-drop → JSON body (from `s-drag-json`)
+- Files included
 
-## Form Handling
+### Query Parameter Inheritance
 
-Forms automatically serialize all inputs:
+Parameters cascade from ancestors:
 
 ```html
-<form s-put="/api/profile" s-target="#status">
-  <input name="name" value="John">
-  <input name="email" value="john@example.com">
-  <input type="file" name="avatar">
-  <button type="submit">Update Profile</button>
-</form>
+<body s-query="org=acme">
+  <div s-query="team=sales">
+    <!-- Requests include: ?org=acme&team=sales -->
+  </div>
+</body>
 ```
-
-For GET requests, form data becomes query parameters. For other methods, data is sent as FormData.
 
 ## Best Practices
 
-1. **Progressive Enhancement** - Start with working HTML forms, add Slim attributes
-2. **Semantic HTML** - Use appropriate elements (`<button>`, `<form>`, etc.)
-3. **Error Handling** - Listen for `slim:error` events
-4. **Loading States** - Use `slim:done` to hide spinners
-5. **Confirmation** - Use `s-confirm` for destructive actions
+1. **Progressive Enhancement** - Add Slim to working HTML
+2. **Semantic HTML** - Use correct elements (`<button>`, `<form>`)
+3. **Error Handling** - Listen for `slim:error`
+5. **Confirmations** - Use `s-confirm` for destructive actions
 
 ## Browser Support
 
-Slim works in all modern browsers that support:
+Requires:
 - ES6+ JavaScript
 - Fetch API
 - Custom Events
 - Intersection Observer
-- WebSockets (optional)
+- WebSockets (for `s-ws`)
 
 ## License
 
