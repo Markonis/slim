@@ -264,6 +264,19 @@ function getEmitSpec(element) {
   }
 }
 
+// src/eval.ts
+function getEvalSpec(element) {
+  return element.getAttribute("s-eval");
+}
+function handleEval(code, element, event) {
+  try {
+    const fn = new Function("event", code);
+    fn.call(element, event);
+  } catch (error) {
+    console.error("s-eval execution failed:", error);
+  }
+}
+
 // src/main.ts
 (function() {
   let appearObserver;
@@ -276,7 +289,7 @@ function getEmitSpec(element) {
     return null;
   }
   function queryEventHandlingElements(root = document.body) {
-    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit]");
+    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval]");
   }
   function broadcastEvent(eventOrType) {
     const event = eventOrType instanceof Event ? eventOrType : new CustomEvent(eventOrType);
@@ -286,7 +299,8 @@ function getEmitSpec(element) {
     for (const element of elements) {
       const emit = getEmitSpec(element);
       const config = getAnyElementConfig(element);
-      if (!emit && !config) continue;
+      const evalSpec = getEvalSpec(element);
+      if (!emit && !config && !evalSpec) continue;
       const specs = parseEventSpecs(element);
       for (const spec of specs) {
         if (spec.event !== event.type) continue;
@@ -296,7 +310,8 @@ function getEmitSpec(element) {
             element,
             emit,
             config,
-            spec
+            spec,
+            eval: evalSpec
           });
         } else {
           localHandlers.push({
@@ -304,7 +319,8 @@ function getEmitSpec(element) {
             element,
             emit,
             config,
-            spec
+            spec,
+            eval: evalSpec
           });
         }
       }
@@ -344,9 +360,12 @@ function getEmitSpec(element) {
   function getAnyElementConfig(element) {
     return getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
   }
-  function handleEvent({ event, element, config, emit }) {
+  function handleEvent({ event, element, config, emit, eval: evalCode }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
+    if (evalCode) {
+      handleEval(evalCode, element, event);
+    }
     if (emit) {
       handleEmit(element, emit);
     }

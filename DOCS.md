@@ -164,6 +164,45 @@ An element can have both a request attribute and `s-emit`. The emit happens afte
 
 When `s-emit` has a delay, it waits before broadcasting. If the element is removed from the DOM before the delay completes, the event is not emitted.
 
+### JavaScript Execution
+
+`s-eval` executes arbitrary JavaScript code immediately when an event fires, with `this` pointing to the element.
+
+```html
+<button s-eval="console.log('Clicked!', this)">Log</button>
+```
+
+The code has access to the `event` object:
+
+```html
+<button s-eval="console.log(event.type)">Log Event Type</button>
+```
+
+Multiple attributes can be combined:
+
+```html
+<button
+  s-eval="this.disabled = true"
+  s-post="/api/submit"
+  s-emit="submitted"
+>
+  Submit
+</button>
+```
+
+In this example, the execution order is:
+1. Confirmation (if `s-confirm` exists)
+2. JavaScript execution (`s-eval`)
+3. Event emission (`s-emit`)
+4. Request sending (`s-post`)
+
+Errors in evaluated code are logged to the console but don't prevent other attributes from executing:
+
+```javascript
+// If this throws an error, emit and request still happen
+s-eval="throw new Error('oops')"
+```
+
 ### User Interaction
 
 `s-confirm` shows a browser confirmation dialog before executing the request.
@@ -478,6 +517,44 @@ The server returns:
 <div>
   <p>Results loaded!</p>
   <button onclick="...">Clear</button>
+</div>
+```
+
+### Library Integration
+
+Use `s-eval` with the `appear` event to integrate with third-party libraries like Bootstrap toasts:
+
+```html
+<button s-post="/api/create" s-target="#toasts">
+  Create
+</button>
+
+<div id="toasts"></div>
+```
+
+The server returns:
+
+```html
+<div
+  class="toast"
+  s-on="appear"
+  s-eval="new bootstrap.Toast(this).show()"
+>
+  <div class="toast-body">Item created successfully!</div>
+</div>
+```
+
+When the toast element is added to the DOM, the `appear` event triggers and `s-eval` initializes the Bootstrap toast.
+
+You can also use `s-eval` for analytics or tracking:
+
+```html
+<div
+  class="notification"
+  s-on="appear"
+  s-eval="gtag('event', 'notification_shown', { type: 'success' })"
+>
+  Welcome back!
 </div>
 ```
 

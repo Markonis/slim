@@ -57,6 +57,10 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 - `s-emit="event-name"` - Broadcast custom event
 - `s-emit="event after 1.5s"` - Delayed event
 
+### Executing JavaScript
+
+- `s-eval="javascript code"` - Execute JavaScript (with `this` = element)
+
 ### Other Attributes
 
 - `s-confirm="message"` - Confirmation dialog
@@ -138,6 +142,13 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 
 ```html
 <button s-confirm="Delete?" s-delete="/api/item"></button>
+```
+
+### JavaScript Execution
+
+```html
+<button s-eval="console.log('Button clicked!', this)">Log</button>
+<button s-eval="this.style.color = 'red'" s-get="/api/data">Update and Log</button>
 ```
 
 ## Default Event Bindings

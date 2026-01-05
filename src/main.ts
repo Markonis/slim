@@ -4,6 +4,7 @@ import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
 import { handleDragEvents } from "./dnd.ts";
 import { getEmitSpec } from "./emit.ts";
+import { getEvalSpec, handleEval } from "./eval.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
@@ -19,7 +20,7 @@ import { getEmitSpec } from "./emit.ts";
 
   function queryEventHandlingElements(root: Element = document.body) {
     return root.querySelectorAll(
-      "[s-get],[s-post],[s-put],[s-delete],[s-emit]",
+      "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval]",
     );
   }
 
@@ -35,15 +36,30 @@ import { getEmitSpec } from "./emit.ts";
     for (const element of elements) {
       const emit = getEmitSpec(element);
       const config = getAnyElementConfig(element);
-      if (!emit && !config) continue;
+      const evalSpec = getEvalSpec(element);
+      if (!emit && !config && !evalSpec) continue;
 
       const specs = parseEventSpecs(element);
       for (const spec of specs) {
         if (spec.event !== event.type) continue;
         if (spec.selector) {
-          globalHandlers.push({ event, element, emit, config, spec });
+          globalHandlers.push({
+            event,
+            element,
+            emit,
+            config,
+            spec,
+            eval: evalSpec,
+          });
         } else {
-          localHandlers.push({ event, element, emit, config, spec });
+          localHandlers.push({
+            event,
+            element,
+            emit,
+            config,
+            spec,
+            eval: evalSpec,
+          });
         }
       }
     }
@@ -93,9 +109,15 @@ import { getEmitSpec } from "./emit.ts";
       getElementConfig(element, "delete");
   }
 
-  function handleEvent({ event, element, config, emit }: EventHandler) {
+  function handleEvent(
+    { event, element, config, emit, eval: evalCode }: EventHandler,
+  ) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
+
+    if (evalCode) {
+      handleEval(evalCode, element, event);
+    }
 
     if (emit) {
       handleEmit(element, emit);

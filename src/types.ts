@@ -25,6 +25,7 @@ export type EventHandler = {
   event: Event;
   element: Element;
   emit: EmitSpec | null;
+  eval: string | null;
   config: RequestConfig | null;
   spec: EventSpec;
 };
