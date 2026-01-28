@@ -1,11 +1,18 @@
+import { HandleTemplateParams } from "./types.ts";
+import { determineTargets } from "./response.ts";
+
 export function getTemplateSelector(element: Element): string | null {
   return element.getAttribute("s-template");
 }
 
-export function handleTemplate(element: Element, selector: string | null) {
-  if (!selector) return;
-  const template = document.querySelector(selector);
+export function handleTemplate(params: HandleTemplateParams) {
+  const { element, templateSelector, targetSelector } = params;
+  if (!templateSelector) return;
+  const template = document.querySelector(templateSelector);
   if (template) {
-    element.innerHTML = template.innerHTML;
+    const targets = determineTargets(element, targetSelector);
+    for (const target of targets) {
+      target.innerHTML = template.innerHTML;
+    }
   }
 }

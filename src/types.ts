@@ -21,6 +21,20 @@ export type RequestConfig = {
   method: string;
 };
 
+export type SendRequestParams = {
+  event: Event;
+  url: string;
+  method: string;
+  element: Element;
+  targetSelector: string | null;
+};
+
+export type HandleTemplateParams = {
+  element: Element;
+  templateSelector: string | null;
+  targetSelector: string | null;
+};
+
 export type EventHandler = {
   event: Event;
   element: Element;
@@ -29,6 +43,7 @@ export type EventHandler = {
   requestConfig: RequestConfig | null;
   eventSpec: EventSpec;
   templateSelector: string | null;
+  targetSelector: string | null;
 };
 
 export type EmitSpec = {

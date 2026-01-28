@@ -1,4 +1,4 @@
-import { PrepareFormDataResult, RequestResult } from "./types.ts";
+import { PrepareFormDataResult, RequestResult, SendRequestParams } from "./types.ts";
 import { processResponse } from "./response.ts";
 
 function prepareFormData(
@@ -46,12 +46,9 @@ function sendFormRequest(
 }
 
 export function sendRequest(
-  event: Event,
-  url: string,
-  method: string,
-  element: Element,
+  params: SendRequestParams,
 ): Promise<RequestResult> {
-  const targetSelector = element.getAttribute("s-target");
+  const { event, url, method, element, targetSelector } = params;
   if (element instanceof HTMLFormElement) {
     return sendFormRequest(url, method, element, targetSelector);
   } else {

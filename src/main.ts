@@ -39,6 +39,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
       const requestConfig = getAnyElementRequestConfig(element);
       const evalCode = getEvalCode(element);
       const templateSelector = getTemplateSelector(element);
+      const targetSelector = element.getAttribute("s-target");
       if (!emitSpec && !requestConfig && !evalCode && !templateSelector) {
         continue;
       }
@@ -55,6 +56,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
           eventSpec,
           evalCode,
           templateSelector,
+          targetSelector,
         });
       }
     }
@@ -112,6 +114,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
       emitSpec,
       evalCode,
       templateSelector,
+      targetSelector,
     }: EventHandler,
   ) {
     const confirmMessage = element.getAttribute("s-confirm");
@@ -126,7 +129,8 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
     }
 
     if (templateSelector) {
-      handleTemplate(element, templateSelector);
+      handleTemplate({ element, templateSelector, targetSelector });
+      observeElementsWithAppearEvent(element);
     }
 
     if (requestConfig) {
@@ -135,7 +139,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
         requestConfig.url,
         queryParams,
       );
-      sendRequest(event, urlWithQueryParams, requestConfig.method, element)
+      sendRequest({ event, url: urlWithQueryParams, method: requestConfig.method, element, targetSelector })
         .then((result) => {
           if (result.html !== null) {
             for (const target of result.targets) {

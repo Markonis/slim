@@ -61,6 +61,10 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 
 - `s-eval="javascript code"` - Execute JavaScript (with `this` = element)
 
+### Client-Side Templates
+
+- `s-template="#selector"` - Use the innerHTML of the template
+
 ### Other Attributes
 
 - `s-confirm="message"` - Confirmation dialog
@@ -149,6 +153,20 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 ```html
 <button s-eval="console.log('Button clicked!', this)">Log</button>
 <button s-eval="this.style.color = 'red'" s-get="/api/data">Update and Log</button>
+```
+
+### Client-Side Templates
+
+```html
+<template id="card-template">
+  <div class="card">
+    <h3>New Card</h3>
+    <p>Card content here</p>
+  </div>
+</template>
+
+<button s-template="#card-template" s-target="#container">Add Card</button>
+<div id="container"></div>
 ```
 
 ## Default Event Bindings

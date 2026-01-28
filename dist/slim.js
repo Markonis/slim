@@ -139,8 +139,8 @@ function sendFormRequest(url, method, element, targetSelector) {
   }
   return fetch(finalUrl, fetchOptions).then((response) => processResponse(response, element, targetSelector));
 }
-function sendRequest(event, url, method, element) {
-  const targetSelector = element.getAttribute("s-target");
+function sendRequest(params) {
+  const { event, url, method, element, targetSelector } = params;
   if (element instanceof HTMLFormElement) {
     return sendFormRequest(url, method, element, targetSelector);
   } else {
@@ -281,11 +281,15 @@ function handleEval(code, element, event) {
 function getTemplateSelector(element) {
   return element.getAttribute("s-template");
 }
-function handleTemplate(element, selector) {
-  if (!selector) return;
-  const template = document.querySelector(selector);
+function handleTemplate(params) {
+  const { element, templateSelector, targetSelector } = params;
+  if (!templateSelector) return;
+  const template = document.querySelector(templateSelector);
   if (template) {
-    element.innerHTML = template.innerHTML;
+    const targets = determineTargets(element, targetSelector);
+    for (const target of targets) {
+      target.innerHTML = template.innerHTML;
+    }
   }
 }
 
@@ -313,6 +317,7 @@ function handleTemplate(element, selector) {
       const requestConfig = getAnyElementRequestConfig(element);
       const evalCode = getEvalCode(element);
       const templateSelector = getTemplateSelector(element);
+      const targetSelector = element.getAttribute("s-target");
       if (!emitSpec && !requestConfig && !evalCode && !templateSelector) {
         continue;
       }
@@ -327,7 +332,8 @@ function handleTemplate(element, selector) {
           requestConfig,
           eventSpec,
           evalCode,
-          templateSelector
+          templateSelector,
+          targetSelector
         });
       }
     }
@@ -366,7 +372,7 @@ function handleTemplate(element, selector) {
   function getAnyElementRequestConfig(element) {
     return getElementRequestConfig(element, "get") ?? getElementRequestConfig(element, "post") ?? getElementRequestConfig(element, "put") ?? getElementRequestConfig(element, "delete");
   }
-  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector }) {
+  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector, targetSelector }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
     if (evalCode) {
@@ -376,12 +382,23 @@ function handleTemplate(element, selector) {
       handleEmit(element, emitSpec);
     }
     if (templateSelector) {
-      handleTemplate(element, templateSelector);
+      handleTemplate({
+        element,
+        templateSelector,
+        targetSelector
+      });
+      observeElementsWithAppearEvent(element);
     }
     if (requestConfig) {
       const queryParams = collectQueryParams(element);
       const urlWithQueryParams = appendQueryParams(requestConfig.url, queryParams);
-      sendRequest(event, urlWithQueryParams, requestConfig.method, element).then((result) => {
+      sendRequest({
+        event,
+        url: urlWithQueryParams,
+        method: requestConfig.method,
+        element,
+        targetSelector
+      }).then((result) => {
         if (result.html !== null) {
           for (const target of result.targets) {
             target.innerHTML = result.html;
