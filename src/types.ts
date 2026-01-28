@@ -24,10 +24,11 @@ export type RequestConfig = {
 export type EventHandler = {
   event: Event;
   element: Element;
-  emit: EmitSpec | null;
-  eval: string | null;
-  config: RequestConfig | null;
-  spec: EventSpec;
+  emitSpec: EmitSpec | null;
+  evalCode: string | null;
+  requestConfig: RequestConfig | null;
+  eventSpec: EventSpec;
+  templateSelector: string | null;
 };
 
 export type EmitSpec = {

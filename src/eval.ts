@@ -1,4 +1,4 @@
-export function getEvalSpec(element: Element): string | null {
+export function getEvalCode(element: Element): string | null {
   return element.getAttribute("s-eval");
 }
 

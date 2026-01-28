@@ -15,6 +15,16 @@
     placeholder="Type something..."
     s-eval="this.value = this.value.toUpperCase()"
   />
+
+  <h2>Template Handling</h2>
+  <template id="test-template">
+    <p>Lorem impsum template content</p>
+  </template>
+
+  <div>
+    <div s-on="click on #template-button" s-template="#test-template"></div>
+    <button id="template-button">Insert Template</button>
+  </div>
   <script src="../dist/slim.js"></script>
 </body>
 </html>

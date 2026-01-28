@@ -4,12 +4,13 @@ import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
 import { handleDragEvents } from "./dnd.ts";
 import { getEmitSpec } from "./emit.ts";
-import { getEvalSpec, handleEval } from "./eval.ts";
+import { getEvalCode, handleEval } from "./eval.ts";
+import { getTemplateSelector, handleTemplate } from "./template.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
 
-  function getElementConfig(
+  function getElementRequestConfig(
     element: Element,
     method: string,
   ): RequestConfig | null {
@@ -20,7 +21,7 @@ import { getEvalSpec, handleEval } from "./eval.ts";
 
   function queryEventHandlingElements(root: Element = document.body) {
     return root.querySelectorAll(
-      "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval]",
+      "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template]",
     );
   }
 
@@ -34,33 +35,27 @@ import { getEvalSpec, handleEval } from "./eval.ts";
     const localHandlers: EventHandler[] = [];
 
     for (const element of elements) {
-      const emit = getEmitSpec(element);
-      const config = getAnyElementConfig(element);
-      const evalSpec = getEvalSpec(element);
-      if (!emit && !config && !evalSpec) continue;
+      const emitSpec = getEmitSpec(element);
+      const requestConfig = getAnyElementRequestConfig(element);
+      const evalCode = getEvalCode(element);
+      const templateSelector = getTemplateSelector(element);
+      if (!emitSpec && !requestConfig && !evalCode && !templateSelector) {
+        continue;
+      }
 
-      const specs = parseEventSpecs(element);
-      for (const spec of specs) {
-        if (spec.event !== event.type) continue;
-        if (spec.selector) {
-          globalHandlers.push({
-            event,
-            element,
-            emit,
-            config,
-            spec,
-            eval: evalSpec,
-          });
-        } else {
-          localHandlers.push({
-            event,
-            element,
-            emit,
-            config,
-            spec,
-            eval: evalSpec,
-          });
-        }
+      const eventSpecs = parseEventSpecs(element);
+      for (const eventSpec of eventSpecs) {
+        if (eventSpec.event !== event.type) continue;
+        const list = eventSpec.selector ? globalHandlers : localHandlers;
+        list.push({
+          event,
+          element,
+          emitSpec,
+          requestConfig,
+          eventSpec,
+          evalCode,
+          templateSelector,
+        });
       }
     }
 
@@ -77,7 +72,7 @@ import { getEvalSpec, handleEval } from "./eval.ts";
         }
 
         const matchingGlobalHandlers = globalHandlers
-          .filter((handler) => current.matches(handler.spec.selector!));
+          .filter((handler) => current.matches(handler.eventSpec.selector!));
 
         for (const globalHandler of matchingGlobalHandlers) {
           handleEvent(globalHandler);
@@ -95,22 +90,29 @@ import { getEvalSpec, handleEval } from "./eval.ts";
       }
     } else { // Globally broadcasted event
       for (const handler of [...globalHandlers, ...localHandlers]) {
-        if (handler.spec.event === event.type) {
+        if (handler.eventSpec.event === event.type) {
           handleEvent(handler);
         }
       }
     }
   }
 
-  function getAnyElementConfig(element: Element) {
-    return getElementConfig(element, "get") ??
-      getElementConfig(element, "post") ??
-      getElementConfig(element, "put") ??
-      getElementConfig(element, "delete");
+  function getAnyElementRequestConfig(element: Element) {
+    return getElementRequestConfig(element, "get") ??
+      getElementRequestConfig(element, "post") ??
+      getElementRequestConfig(element, "put") ??
+      getElementRequestConfig(element, "delete");
   }
 
   function handleEvent(
-    { event, element, config, emit, eval: evalCode }: EventHandler,
+    {
+      event,
+      element,
+      requestConfig,
+      emitSpec,
+      evalCode,
+      templateSelector,
+    }: EventHandler,
   ) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
@@ -119,14 +121,21 @@ import { getEvalSpec, handleEval } from "./eval.ts";
       handleEval(evalCode, element, event);
     }
 
-    if (emit) {
-      handleEmit(element, emit);
+    if (emitSpec) {
+      handleEmit(element, emitSpec);
     }
 
-    if (config) {
+    if (templateSelector) {
+      handleTemplate(element, templateSelector);
+    }
+
+    if (requestConfig) {
       const queryParams = collectQueryParams(element);
-      const urlWithQueryParams = appendQueryParams(config.url, queryParams);
-      sendRequest(event, urlWithQueryParams, config.method, element)
+      const urlWithQueryParams = appendQueryParams(
+        requestConfig.url,
+        queryParams,
+      );
+      sendRequest(event, urlWithQueryParams, requestConfig.method, element)
         .then((result) => {
           if (result.html !== null) {
             for (const target of result.targets) {

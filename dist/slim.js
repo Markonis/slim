@@ -265,7 +265,7 @@ function getEmitSpec(element) {
 }
 
 // src/eval.ts
-function getEvalSpec(element) {
+function getEvalCode(element) {
   return element.getAttribute("s-eval");
 }
 function handleEval(code, element, event) {
@@ -277,10 +277,22 @@ function handleEval(code, element, event) {
   }
 }
 
+// src/template.ts
+function getTemplateSelector(element) {
+  return element.getAttribute("s-template");
+}
+function handleTemplate(element, selector) {
+  if (!selector) return;
+  const template = document.querySelector(selector);
+  if (template) {
+    element.innerHTML = template.innerHTML;
+  }
+}
+
 // src/main.ts
 (function() {
   let appearObserver;
-  function getElementConfig(element, method) {
+  function getElementRequestConfig(element, method) {
     const url = element.getAttribute(`s-${method}`);
     if (url) return {
       url,
@@ -289,7 +301,7 @@ function handleEval(code, element, event) {
     return null;
   }
   function queryEventHandlingElements(root = document.body) {
-    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval]");
+    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template]");
   }
   function broadcastEvent(eventOrType) {
     const event = eventOrType instanceof Event ? eventOrType : new CustomEvent(eventOrType);
@@ -297,32 +309,26 @@ function handleEval(code, element, event) {
     const globalHandlers = [];
     const localHandlers = [];
     for (const element of elements) {
-      const emit = getEmitSpec(element);
-      const config = getAnyElementConfig(element);
-      const evalSpec = getEvalSpec(element);
-      if (!emit && !config && !evalSpec) continue;
-      const specs = parseEventSpecs(element);
-      for (const spec of specs) {
-        if (spec.event !== event.type) continue;
-        if (spec.selector) {
-          globalHandlers.push({
-            event,
-            element,
-            emit,
-            config,
-            spec,
-            eval: evalSpec
-          });
-        } else {
-          localHandlers.push({
-            event,
-            element,
-            emit,
-            config,
-            spec,
-            eval: evalSpec
-          });
-        }
+      const emitSpec = getEmitSpec(element);
+      const requestConfig = getAnyElementRequestConfig(element);
+      const evalCode = getEvalCode(element);
+      const templateSelector = getTemplateSelector(element);
+      if (!emitSpec && !requestConfig && !evalCode && !templateSelector) {
+        continue;
+      }
+      const eventSpecs = parseEventSpecs(element);
+      for (const eventSpec of eventSpecs) {
+        if (eventSpec.event !== event.type) continue;
+        const list = eventSpec.selector ? globalHandlers : localHandlers;
+        list.push({
+          event,
+          element,
+          emitSpec,
+          requestConfig,
+          eventSpec,
+          evalCode,
+          templateSelector
+        });
       }
     }
     if (event.target && event.target instanceof Element) {
@@ -333,7 +339,7 @@ function handleEval(code, element, event) {
         if (localHandler) {
           handleEvent(localHandler);
         }
-        const matchingGlobalHandlers = globalHandlers.filter((handler) => current.matches(handler.spec.selector));
+        const matchingGlobalHandlers = globalHandlers.filter((handler) => current.matches(handler.eventSpec.selector));
         for (const globalHandler of matchingGlobalHandlers) {
           handleEvent(globalHandler);
         }
@@ -351,28 +357,31 @@ function handleEval(code, element, event) {
         ...globalHandlers,
         ...localHandlers
       ]) {
-        if (handler.spec.event === event.type) {
+        if (handler.eventSpec.event === event.type) {
           handleEvent(handler);
         }
       }
     }
   }
-  function getAnyElementConfig(element) {
-    return getElementConfig(element, "get") ?? getElementConfig(element, "post") ?? getElementConfig(element, "put") ?? getElementConfig(element, "delete");
+  function getAnyElementRequestConfig(element) {
+    return getElementRequestConfig(element, "get") ?? getElementRequestConfig(element, "post") ?? getElementRequestConfig(element, "put") ?? getElementRequestConfig(element, "delete");
   }
-  function handleEvent({ event, element, config, emit, eval: evalCode }) {
+  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
     if (evalCode) {
       handleEval(evalCode, element, event);
     }
-    if (emit) {
-      handleEmit(element, emit);
+    if (emitSpec) {
+      handleEmit(element, emitSpec);
     }
-    if (config) {
+    if (templateSelector) {
+      handleTemplate(element, templateSelector);
+    }
+    if (requestConfig) {
       const queryParams = collectQueryParams(element);
-      const urlWithQueryParams = appendQueryParams(config.url, queryParams);
-      sendRequest(event, urlWithQueryParams, config.method, element).then((result) => {
+      const urlWithQueryParams = appendQueryParams(requestConfig.url, queryParams);
+      sendRequest(event, urlWithQueryParams, requestConfig.method, element).then((result) => {
         if (result.html !== null) {
           for (const target of result.targets) {
             target.innerHTML = result.html;
