@@ -381,24 +381,15 @@ function handleTemplate(params) {
     if (emitSpec) {
       handleEmit(element, emitSpec);
     }
-    if (templateSelector) {
-      handleTemplate({
-        element,
-        templateSelector,
-        targetSelector
-      });
-      observeElementsWithAppearEvent(element);
-    }
     if (requestConfig) {
-      const queryParams = collectQueryParams(element);
-      const urlWithQueryParams = appendQueryParams(requestConfig.url, queryParams);
-      sendRequest({
+      const sendRequestParams = {
         event,
-        url: urlWithQueryParams,
-        method: requestConfig.method,
         element,
-        targetSelector
-      }).then((result) => {
+        targetSelector,
+        method: requestConfig.method,
+        url: appendQueryParams(requestConfig.url, collectQueryParams(element))
+      };
+      sendRequest(sendRequestParams).then((result) => {
         if (result.html !== null) {
           for (const target of result.targets) {
             target.innerHTML = result.html;
@@ -418,6 +409,14 @@ function handleTemplate(params) {
       }).finally(() => {
         element.dispatchEvent(new CustomEvent("slim:done"));
       });
+    }
+    if (templateSelector) {
+      handleTemplate({
+        element,
+        templateSelector,
+        targetSelector
+      });
+      observeElementsWithAppearEvent(element);
     }
   }
   function handleEmit(element, emit) {

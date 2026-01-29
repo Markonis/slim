@@ -1,5 +1,10 @@
 import { appendQueryParams, collectQueryParams } from "./query.ts";
-import { EmitSpec, EventHandler, RequestConfig } from "./types.ts";
+import {
+  EmitSpec,
+  EventHandler,
+  RequestConfig,
+  SendRequestParams,
+} from "./types.ts";
 import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
 import { handleDragEvents } from "./dnd.ts";
@@ -128,18 +133,19 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
       handleEmit(element, emitSpec);
     }
 
-    if (templateSelector) {
-      handleTemplate({ element, templateSelector, targetSelector });
-      observeElementsWithAppearEvent(element);
-    }
-
     if (requestConfig) {
-      const queryParams = collectQueryParams(element);
-      const urlWithQueryParams = appendQueryParams(
-        requestConfig.url,
-        queryParams,
-      );
-      sendRequest({ event, url: urlWithQueryParams, method: requestConfig.method, element, targetSelector })
+      const sendRequestParams: SendRequestParams = {
+        event,
+        element,
+        targetSelector,
+        method: requestConfig.method,
+        url: appendQueryParams(
+          requestConfig.url,
+          collectQueryParams(element),
+        ),
+      };
+
+      sendRequest(sendRequestParams)
         .then((result) => {
           if (result.html !== null) {
             for (const target of result.targets) {
@@ -162,6 +168,11 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
         .finally(() => {
           element.dispatchEvent(new CustomEvent("slim:done"));
         });
+    }
+
+    if (templateSelector) {
+      handleTemplate({ element, templateSelector, targetSelector });
+      observeElementsWithAppearEvent(element);
     }
   }
 
