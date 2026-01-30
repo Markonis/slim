@@ -42,6 +42,12 @@ function sendFormRequest(
     fetchOptions.body = body;
   }
 
+  if (!fetchOptions.headers) {
+    fetchOptions.headers = {};
+  }
+  const headers = fetchOptions.headers as Record<string, string>;
+  headers["s-location"] = window.location.href;
+
   return fetch(finalUrl, fetchOptions)
     .then((response) => processResponse(response, element, targetSelector, swapStrategy));
 }
@@ -63,6 +69,8 @@ export function sendRequest(
         body = json;
       }
     }
+
+    headers["s-location"] = window.location.href;
 
     return fetch(url, { method, headers, body })
       .then((response) => processResponse(response, element, targetSelector, swapStrategy));

@@ -143,6 +143,11 @@ function sendFormRequest(url, method, element, targetSelector, swapStrategy) {
   if (body) {
     fetchOptions.body = body;
   }
+  if (!fetchOptions.headers) {
+    fetchOptions.headers = {};
+  }
+  const headers = fetchOptions.headers;
+  headers["s-location"] = window.location.href;
   return fetch(finalUrl, fetchOptions).then((response) => processResponse(response, element, targetSelector, swapStrategy));
 }
 function sendRequest(params) {
@@ -159,6 +164,7 @@ function sendRequest(params) {
         body = json;
       }
     }
+    headers["s-location"] = window.location.href;
     return fetch(url, {
       method,
       headers,
