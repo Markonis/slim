@@ -1,3 +1,5 @@
+export type SwapStrategy = "inner" | "outer";
+
 export type EventSpec = {
   selector?: string;
   event: string;
@@ -14,6 +16,7 @@ export type RequestResult = {
   html: string | null;
   text: string | null;
   targets: Element[];
+  swapStrategy: SwapStrategy;
 };
 
 export type RequestConfig = {
@@ -27,12 +30,15 @@ export type SendRequestParams = {
   method: string;
   element: Element;
   targetSelector: string | null;
+  swapStrategy: SwapStrategy;
 };
 
 export type HandleTemplateParams = {
   element: Element;
   templateSelector: string | null;
   targetSelector: string | null;
+  swapStrategy: SwapStrategy;
+  observeElementsWithAppearEvent: (element: Element) => void;
 };
 
 export type EventHandler = {
@@ -44,9 +50,18 @@ export type EventHandler = {
   eventSpec: EventSpec;
   templateSelector: string | null;
   targetSelector: string | null;
+  swapStrategy: SwapStrategy;
 };
 
 export type EmitSpec = {
   event: string;
   delay: number;
+};
+
+export type PerformSwapParams = {
+  content: string;
+  element: Element;
+  targetSelector: string | null;
+  swapStrategy: SwapStrategy;
+  observeElementsWithAppearEvent: (element: Element) => void;
 };

@@ -4,6 +4,7 @@ import {
   EventHandler,
   RequestConfig,
   SendRequestParams,
+  SwapStrategy,
 } from "./types.ts";
 import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
@@ -11,6 +12,7 @@ import { handleDragEvents } from "./dnd.ts";
 import { getEmitSpec } from "./emit.ts";
 import { getEvalCode, handleEval } from "./eval.ts";
 import { getTemplateSelector, handleTemplate } from "./template.ts";
+import { getSwapStrategy, performSwap } from "./swap.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
@@ -62,6 +64,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
           evalCode,
           templateSelector,
           targetSelector,
+          swapStrategy: getSwapStrategy(element),
         });
       }
     }
@@ -120,6 +123,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
       evalCode,
       templateSelector,
       targetSelector,
+      swapStrategy,
     }: EventHandler,
   ) {
     const confirmMessage = element.getAttribute("s-confirm");
@@ -138,6 +142,7 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
         event,
         element,
         targetSelector,
+        swapStrategy,
         method: requestConfig.method,
         url: appendQueryParams(
           requestConfig.url,
@@ -148,10 +153,13 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
       sendRequest(sendRequestParams)
         .then((result) => {
           if (result.html !== null) {
-            for (const target of result.targets) {
-              target.innerHTML = result.html!;
-              observeElementsWithAppearEvent(target);
-            }
+            performSwap({
+              content: result.html,
+              element,
+              targetSelector,
+              swapStrategy: result.swapStrategy,
+              observeElementsWithAppearEvent,
+            });
           } else if (result.text !== null) {
             for (const target of result.targets) {
               target.textContent = result.text;
@@ -171,8 +179,13 @@ import { getTemplateSelector, handleTemplate } from "./template.ts";
     }
 
     if (templateSelector) {
-      handleTemplate({ element, templateSelector, targetSelector });
-      observeElementsWithAppearEvent(element);
+      handleTemplate({
+        element,
+        templateSelector,
+        targetSelector,
+        swapStrategy,
+        observeElementsWithAppearEvent,
+      });
     }
   }
 

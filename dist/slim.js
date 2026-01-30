@@ -45,7 +45,7 @@ function appendQueryParams(url, params) {
 }
 
 // src/response.ts
-function processResponse(response, element, targetSelector) {
+function processResponse(response, element, targetSelector, swapStrategy) {
   if (response.headers.get("S-Refresh") === "true") {
     location.reload();
     return Promise.resolve({
@@ -53,7 +53,8 @@ function processResponse(response, element, targetSelector) {
       html: null,
       text: null,
       event: null,
-      targets: []
+      targets: [],
+      swapStrategy
     });
   }
   if (!response.ok) {
@@ -62,6 +63,8 @@ function processResponse(response, element, targetSelector) {
   const serverTargetSelector = response.headers.get("S-Target");
   const finalTargetSelector = serverTargetSelector || targetSelector;
   const event = response.headers.get("S-Emit");
+  const serverSwapStrategy = response.headers.get("S-Swap");
+  const finalSwapStrategy = serverSwapStrategy === "outer" ? "outer" : swapStrategy;
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
     const mediaType = contentType?.split(";")[0];
@@ -73,7 +76,8 @@ function processResponse(response, element, targetSelector) {
           html: text,
           text: null,
           event,
-          targets
+          targets,
+          swapStrategy: finalSwapStrategy
         };
       case "text/plain":
         return {
@@ -81,7 +85,8 @@ function processResponse(response, element, targetSelector) {
           html: null,
           text,
           event,
-          targets
+          targets,
+          swapStrategy: finalSwapStrategy
         };
       default:
         return {
@@ -89,7 +94,8 @@ function processResponse(response, element, targetSelector) {
           html: null,
           text: null,
           event,
-          targets: []
+          targets: [],
+          swapStrategy: finalSwapStrategy
         };
     }
   });
@@ -129,7 +135,7 @@ function getFullURL(url) {
     return new URL(url, location.origin);
   }
 }
-function sendFormRequest(url, method, element, targetSelector) {
+function sendFormRequest(url, method, element, targetSelector, swapStrategy) {
   const { url: finalUrl, body } = prepareFormData(element, method, url);
   const fetchOptions = {
     method
@@ -137,12 +143,12 @@ function sendFormRequest(url, method, element, targetSelector) {
   if (body) {
     fetchOptions.body = body;
   }
-  return fetch(finalUrl, fetchOptions).then((response) => processResponse(response, element, targetSelector));
+  return fetch(finalUrl, fetchOptions).then((response) => processResponse(response, element, targetSelector, swapStrategy));
 }
 function sendRequest(params) {
-  const { event, url, method, element, targetSelector } = params;
+  const { event, url, method, element, targetSelector, swapStrategy } = params;
   if (element instanceof HTMLFormElement) {
-    return sendFormRequest(url, method, element, targetSelector);
+    return sendFormRequest(url, method, element, targetSelector, swapStrategy);
   } else {
     const headers = {};
     let body;
@@ -157,7 +163,7 @@ function sendRequest(params) {
       method,
       headers,
       body
-    }).then((response) => processResponse(response, element, targetSelector));
+    }).then((response) => processResponse(response, element, targetSelector, swapStrategy));
   }
 }
 
@@ -277,19 +283,64 @@ function handleEval(code, element, event) {
   }
 }
 
+// src/swap.ts
+function getSwapStrategy(element) {
+  const swapValue = element.getAttribute("s-swap");
+  if (swapValue === "outer") return "outer";
+  return "inner";
+}
+function performInnerSwap(target, content, observeElementsWithAppearEvent) {
+  target.innerHTML = content;
+  observeElementsWithAppearEvent(target);
+}
+function performOuterSwap(target, content, observeElementsWithAppearEvent) {
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = content;
+  const newElements = [];
+  while (tempDiv.firstChild) {
+    const node = tempDiv.firstChild;
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      newElements.push(node);
+    }
+    if (target.parentElement) {
+      target.parentElement.insertBefore(node, target);
+    }
+  }
+  if (target.parentElement) {
+    target.parentElement.removeChild(target);
+  }
+  for (const newElement of newElements) {
+    observeElementsWithAppearEvent(newElement);
+  }
+}
+function performSwap(params) {
+  const { content, element, targetSelector, swapStrategy, observeElementsWithAppearEvent } = params;
+  const targets = determineTargets(element, targetSelector);
+  for (const target of targets) {
+    if (swapStrategy === "outer") {
+      performOuterSwap(target, content, observeElementsWithAppearEvent);
+    } else {
+      performInnerSwap(target, content, observeElementsWithAppearEvent);
+    }
+  }
+}
+
 // src/template.ts
 function getTemplateSelector(element) {
   return element.getAttribute("s-template");
 }
 function handleTemplate(params) {
-  const { element, templateSelector, targetSelector } = params;
+  const { element, templateSelector, targetSelector, swapStrategy, observeElementsWithAppearEvent } = params;
   if (!templateSelector) return;
   const template = document.querySelector(templateSelector);
   if (template) {
-    const targets = determineTargets(element, targetSelector);
-    for (const target of targets) {
-      target.innerHTML = template.innerHTML;
-    }
+    performSwap({
+      content: template.innerHTML,
+      element,
+      targetSelector,
+      swapStrategy,
+      observeElementsWithAppearEvent
+    });
   }
 }
 
@@ -333,7 +384,8 @@ function handleTemplate(params) {
           eventSpec,
           evalCode,
           templateSelector,
-          targetSelector
+          targetSelector,
+          swapStrategy: getSwapStrategy(element)
         });
       }
     }
@@ -372,7 +424,7 @@ function handleTemplate(params) {
   function getAnyElementRequestConfig(element) {
     return getElementRequestConfig(element, "get") ?? getElementRequestConfig(element, "post") ?? getElementRequestConfig(element, "put") ?? getElementRequestConfig(element, "delete");
   }
-  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector, targetSelector }) {
+  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector, targetSelector, swapStrategy }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
     if (evalCode) {
@@ -386,15 +438,19 @@ function handleTemplate(params) {
         event,
         element,
         targetSelector,
+        swapStrategy,
         method: requestConfig.method,
         url: appendQueryParams(requestConfig.url, collectQueryParams(element))
       };
       sendRequest(sendRequestParams).then((result) => {
         if (result.html !== null) {
-          for (const target of result.targets) {
-            target.innerHTML = result.html;
-            observeElementsWithAppearEvent(target);
-          }
+          performSwap({
+            content: result.html,
+            element,
+            targetSelector,
+            swapStrategy: result.swapStrategy,
+            observeElementsWithAppearEvent
+          });
         } else if (result.text !== null) {
           for (const target of result.targets) {
             target.textContent = result.text;
@@ -414,9 +470,10 @@ function handleTemplate(params) {
       handleTemplate({
         element,
         templateSelector,
-        targetSelector
+        targetSelector,
+        swapStrategy,
+        observeElementsWithAppearEvent
       });
-      observeElementsWithAppearEvent(element);
     }
   }
   function handleEmit(element, emit) {

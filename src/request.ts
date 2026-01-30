@@ -1,4 +1,4 @@
-import { PrepareFormDataResult, RequestResult, SendRequestParams } from "./types.ts";
+import { PrepareFormDataResult, RequestResult, SendRequestParams, SwapStrategy } from "./types.ts";
 import { processResponse } from "./response.ts";
 
 function prepareFormData(
@@ -33,6 +33,7 @@ function sendFormRequest(
   method: string,
   element: HTMLFormElement,
   targetSelector: string | null,
+  swapStrategy: SwapStrategy,
 ): Promise<RequestResult> {
   const { url: finalUrl, body } = prepareFormData(element, method, url);
 
@@ -42,15 +43,15 @@ function sendFormRequest(
   }
 
   return fetch(finalUrl, fetchOptions)
-    .then((response) => processResponse(response, element, targetSelector));
+    .then((response) => processResponse(response, element, targetSelector, swapStrategy));
 }
 
 export function sendRequest(
   params: SendRequestParams,
 ): Promise<RequestResult> {
-  const { event, url, method, element, targetSelector } = params;
+  const { event, url, method, element, targetSelector, swapStrategy } = params;
   if (element instanceof HTMLFormElement) {
-    return sendFormRequest(url, method, element, targetSelector);
+    return sendFormRequest(url, method, element, targetSelector, swapStrategy);
   } else {
     const headers: Record<string, string> = {};
     let body: string | undefined;
@@ -64,6 +65,6 @@ export function sendRequest(
     }
 
     return fetch(url, { method, headers, body })
-      .then((response) => processResponse(response, element, targetSelector));
+      .then((response) => processResponse(response, element, targetSelector, swapStrategy));
   }
 }

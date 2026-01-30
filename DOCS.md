@@ -48,7 +48,7 @@ Slim sends the request using the Fetch API with the appropriate HTTP method. For
 When the response arrives:
 
 1. **Status Check**: Non-2xx status codes fail the request
-2. **Headers**: Slim checks for `S-Target` (override target selector), `S-Emit` (event to broadcast), and `S-Refresh` (reload page)
+2. **Headers**: Slim checks for `S-Target` (override target selector), `S-Swap` (override swap strategy), `S-Emit` (event to broadcast), and `S-Refresh` (reload page)
 3. **Content-Type**: Determines how to update the DOM
 4. **DOM Update**: Updates the target element(s)
 
@@ -56,7 +56,9 @@ When the response arrives:
 
 Based on the response's `Content-Type`:
 
-- `text/html`: Sets target's `innerHTML` to the response text
+- `text/html`: Updates target element(s) based on swap strategy
+  - `inner` (default): Sets target's `innerHTML` to the response text
+  - `outer`: Replaces entire target element with response content
 - `text/plain`: Sets target's `textContent` to the response text
 - Other types: Only processes headers, no DOM update
 
@@ -133,6 +135,43 @@ The server can override the target by sending an `S-Target: selector` response h
 If the server responds with `S-Target: #other`, that element will be updated instead of `#default`.
 
 The selector can match multiple elements. All matching elements are updated with the same response.
+
+### Swap Strategy
+
+`s-swap` controls how response content replaces target elements.
+
+Inner swap (default):
+```html
+<button s-get="/api/data">
+  <!-- Response replaces innerHTML of this button -->
+</button>
+```
+
+Outer swap:
+```html
+<div id="card" s-get="/api/data" s-swap="outer">
+  <!-- Entire div is replaced, including the div itself -->
+</div>
+```
+
+Valid values:
+- `inner` (default if omitted): Replaces element's `innerHTML`
+- `outer`: Replaces entire element with response content
+
+The server can override the swap strategy by sending an `S-Swap: outer` or `S-Swap: inner` response header. Server headers take precedence over the HTML attribute.
+
+Outer swap supports multiple root-level elements in the response. If the server returns `<div>A</div><div>B</div>`, both elements are inserted in place of the target:
+
+```html
+<div id="card" s-get="/api/cards" s-swap="outer">
+  Card content
+</div>
+```
+
+Edge cases:
+- If `s-swap="outer"` but the target element has no parent, the swap is skipped for that target
+- For `text/plain` responses, swap strategy is ignored (always uses `textContent`)
+- Invalid values default to `inner`
 
 ### Event Emission
 

@@ -1,9 +1,10 @@
-import { RequestResult } from "./types.ts";
+import { RequestResult, SwapStrategy } from "./types.ts";
 
 export function processResponse(
   response: Response,
   element: Element,
   targetSelector: string | null,
+  swapStrategy: SwapStrategy,
 ): Promise<RequestResult> {
   if (response.headers.get("S-Refresh") === "true") {
     location.reload();
@@ -13,6 +14,7 @@ export function processResponse(
       text: null,
       event: null,
       targets: [],
+      swapStrategy,
     });
   }
 
@@ -23,6 +25,8 @@ export function processResponse(
   const serverTargetSelector = response.headers.get("S-Target");
   const finalTargetSelector = serverTargetSelector || targetSelector;
   const event = response.headers.get("S-Emit");
+  const serverSwapStrategy = response.headers.get("S-Swap");
+  const finalSwapStrategy = (serverSwapStrategy === "outer" ? "outer" : swapStrategy) as "inner" | "outer";
 
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
@@ -36,6 +40,7 @@ export function processResponse(
           text: null,
           event,
           targets,
+          swapStrategy: finalSwapStrategy,
         };
       case "text/plain":
         return {
@@ -44,6 +49,7 @@ export function processResponse(
           text: text,
           event,
           targets,
+          swapStrategy: finalSwapStrategy,
         };
       default:
         return {
@@ -52,6 +58,7 @@ export function processResponse(
           text: null,
           event,
           targets: [],
+          swapStrategy: finalSwapStrategy,
         };
     }
   });
