@@ -4,7 +4,6 @@ import {
   EventHandler,
   RequestConfig,
   SendRequestParams,
-  SwapStrategy,
 } from "./types.ts";
 import { sendRequest } from "./request.ts";
 import { parseEventSpecs } from "./event.ts";
