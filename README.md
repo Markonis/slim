@@ -178,6 +178,12 @@ Elements trigger requests automatically when `s-on` is not specified:
 - `<input type="text">`, `<select>` → `change` (also `input`)
 - Other elements → `appear`
 
+## Request Headers
+
+Every request sent by Slim includes:
+
+- `S-Location` - The URL of the current page (for server context/analytics)
+
 ## Server Response Headers
 
 - `S-Target: selector` - Override update target

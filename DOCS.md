@@ -37,7 +37,9 @@ If a matching handler has an HTTP method attribute (`s-get`, `s-post`, etc.), Sl
 
 1. **URL Building**: Takes the URL from the attribute and appends query parameters (described below)
 2. **Data Collection**: Gathers form data or drag data
-3. **Headers**: Sets Content-Type if needed (JSON for drag-drop, otherwise FormData)
+3. **Headers**: Sets the following headers as needed:
+   - `Content-Type: application/json` for drag-drop requests with JSON data
+   - `S-Location`: The URL of the current page (sent with every request)
 
 ### Request Execution
 
@@ -374,6 +376,20 @@ Custom events (created by `s-emit` or WebSocket) are broadcasted globally. All e
   <ul id="list"></ul>
 </div>
 ```
+
+## Request Headers
+
+Slim automatically includes the following headers with every request:
+
+**S-Location**: The full URL of the current page. This is sent with all requests, regardless of which URL the request is being sent to. This allows the server to know the context (which page the user was on) when processing any request.
+
+Example:
+```
+GET /api/data HTTP/1.1
+S-Location: https://example.com/users?page=2
+```
+
+This is useful for server-side tracking, analytics, audit logging, or conditional logic that depends on the referring page.
 
 ## Data Collection & Processing
 
