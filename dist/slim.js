@@ -454,7 +454,7 @@ function handlePush(url) {
     }
     if (pushUrl) {
       handlePush(pushUrl);
-      broadcastEvent("slim:push");
+      broadcastEvent("location:change");
     }
     if (emitSpec) {
       handleEmit(element, emitSpec);
@@ -486,7 +486,7 @@ function handlePush(url) {
         }
         if (result.pushUrl) {
           handlePush(result.pushUrl);
-          broadcastEvent("slim:push");
+          broadcastEvent("location:change");
         }
         element.dispatchEvent(new CustomEvent("slim:ok"));
       }).catch((error) => {
@@ -564,6 +564,12 @@ function handlePush(url) {
         capture: true
       });
     }
+    addEventListener("popstate", () => {
+      broadcastEvent("location:change");
+    });
+    addEventListener("hashchange", () => {
+      broadcastEvent("hash:change");
+    });
   }
   function createWebSocket(handleError) {
     const url = document.body.getAttribute("s-ws");

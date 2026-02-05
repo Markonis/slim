@@ -141,7 +141,7 @@ import { getPushUrl, handlePush } from "./push.ts";
 
     if (pushUrl) {
       handlePush(pushUrl);
-      broadcastEvent("slim:push");
+      broadcastEvent("location:change");
     }
 
     if (emitSpec) {
@@ -180,7 +180,7 @@ import { getPushUrl, handlePush } from "./push.ts";
           }
           if (result.pushUrl) {
             handlePush(result.pushUrl);
-            broadcastEvent("slim:push");
+            broadcastEvent("location:change");
           }
           element.dispatchEvent(new CustomEvent("slim:ok"));
         })
@@ -265,6 +265,14 @@ import { getPushUrl, handlePush } from "./push.ts";
         broadcastEvent(event);
       }, { capture: true });
     }
+
+    addEventListener("popstate", () => {
+      broadcastEvent("location:change");
+    });
+
+    addEventListener("hashchange", () => {
+      broadcastEvent("hash:change");
+    });
   }
 
   function createWebSocket(handleError: () => void) {

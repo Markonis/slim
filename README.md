@@ -227,7 +227,8 @@ Slim dispatches on request elements:
 
 Global events:
 
-- `slim:push` - URL pushed to browser history
+- `location:change` - URL pushed / poped from browser history
+- `hash:change` - Location hash changed
 
 ## Request Data
 
