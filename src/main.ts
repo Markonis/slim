@@ -139,12 +139,12 @@ import { getPushUrl, handlePush } from "./push.ts";
       handleEval(evalCode, element, event);
     }
 
-    if (emitSpec) {
-      handleEmit(element, emitSpec);
-    }
-
     if (pushUrl) {
       handlePush(pushUrl);
+    }
+
+    if (emitSpec) {
+      handleEmit(element, emitSpec);
     }
 
     if (requestConfig) {
