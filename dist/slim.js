@@ -452,11 +452,11 @@ function handlePush(url) {
     if (evalCode) {
       handleEval(evalCode, element, event);
     }
-    if (emitSpec) {
-      handleEmit(element, emitSpec);
-    }
     if (pushUrl) {
       handlePush(pushUrl);
+    }
+    if (emitSpec) {
+      handleEmit(element, emitSpec);
     }
     if (requestConfig) {
       const sendRequestParams = {
