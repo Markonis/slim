@@ -141,6 +141,7 @@ import { getPushUrl, handlePush } from "./push.ts";
 
     if (pushUrl) {
       handlePush(pushUrl);
+      broadcastEvent("slim:push");
     }
 
     if (emitSpec) {
@@ -179,6 +180,7 @@ import { getPushUrl, handlePush } from "./push.ts";
           }
           if (result.pushUrl) {
             handlePush(result.pushUrl);
+            broadcastEvent("slim:push");
           }
           element.dispatchEvent(new CustomEvent("slim:ok"));
         })

@@ -225,6 +225,10 @@ Slim dispatches on request elements:
 - `slim:error` - Request failed
 - `slim:done` - Request completed
 
+Global events:
+
+- `slim:push` - URL pushed to browser history
+
 ## Request Data
 
 ### GET Requests

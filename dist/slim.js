@@ -454,6 +454,7 @@ function handlePush(url) {
     }
     if (pushUrl) {
       handlePush(pushUrl);
+      broadcastEvent("slim:push");
     }
     if (emitSpec) {
       handleEmit(element, emitSpec);
@@ -485,6 +486,7 @@ function handlePush(url) {
         }
         if (result.pushUrl) {
           handlePush(result.pushUrl);
+          broadcastEvent("slim:push");
         }
         element.dispatchEvent(new CustomEvent("slim:ok"));
       }).catch((error) => {
