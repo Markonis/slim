@@ -15,6 +15,7 @@ export function processResponse(
       event: null,
       targets: [],
       swapStrategy,
+      pushUrl: null,
     });
   }
 
@@ -26,7 +27,9 @@ export function processResponse(
   const finalTargetSelector = serverTargetSelector || targetSelector;
   const event = response.headers.get("S-Emit");
   const serverSwapStrategy = response.headers.get("S-Swap");
-  const finalSwapStrategy = (serverSwapStrategy === "outer" ? "outer" : swapStrategy) as "inner" | "outer";
+  const finalSwapStrategy =
+    (serverSwapStrategy === "outer" ? "outer" : swapStrategy) as SwapStrategy;
+  const pushUrl = response.headers.get("S-Push");
 
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
@@ -41,6 +44,7 @@ export function processResponse(
           event,
           targets,
           swapStrategy: finalSwapStrategy,
+          pushUrl,
         };
       case "text/plain":
         return {
@@ -50,6 +54,7 @@ export function processResponse(
           event,
           targets,
           swapStrategy: finalSwapStrategy,
+          pushUrl,
         };
       default:
         return {
@@ -59,6 +64,7 @@ export function processResponse(
           event,
           targets: [],
           swapStrategy: finalSwapStrategy,
+          pushUrl,
         };
     }
   });

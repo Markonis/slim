@@ -6,7 +6,13 @@ export function getTemplateSelector(element: Element): string | null {
 }
 
 export function handleTemplate(params: HandleTemplateParams) {
-  const { element, templateSelector, targetSelector, swapStrategy, observeElementsWithAppearEvent } = params;
+  const {
+    element,
+    templateSelector,
+    targetSelector,
+    swapStrategy,
+    observeElementsWithAppearEvent,
+  } = params;
   if (!templateSelector) return;
   const template = document.querySelector(templateSelector);
   if (template) {

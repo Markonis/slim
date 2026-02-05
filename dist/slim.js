@@ -54,7 +54,8 @@ function processResponse(response, element, targetSelector, swapStrategy) {
       text: null,
       event: null,
       targets: [],
-      swapStrategy
+      swapStrategy,
+      pushUrl: null
     });
   }
   if (!response.ok) {
@@ -65,6 +66,7 @@ function processResponse(response, element, targetSelector, swapStrategy) {
   const event = response.headers.get("S-Emit");
   const serverSwapStrategy = response.headers.get("S-Swap");
   const finalSwapStrategy = serverSwapStrategy === "outer" ? "outer" : swapStrategy;
+  const pushUrl = response.headers.get("S-Push");
   return response.text().then((text) => {
     const contentType = response.headers.get("content-type");
     const mediaType = contentType?.split(";")[0];
@@ -77,7 +79,8 @@ function processResponse(response, element, targetSelector, swapStrategy) {
           text: null,
           event,
           targets,
-          swapStrategy: finalSwapStrategy
+          swapStrategy: finalSwapStrategy,
+          pushUrl
         };
       case "text/plain":
         return {
@@ -86,7 +89,8 @@ function processResponse(response, element, targetSelector, swapStrategy) {
           text,
           event,
           targets,
-          swapStrategy: finalSwapStrategy
+          swapStrategy: finalSwapStrategy,
+          pushUrl
         };
       default:
         return {
@@ -95,7 +99,8 @@ function processResponse(response, element, targetSelector, swapStrategy) {
           text: null,
           event,
           targets: [],
-          swapStrategy: finalSwapStrategy
+          swapStrategy: finalSwapStrategy,
+          pushUrl
         };
     }
   });
@@ -350,6 +355,15 @@ function handleTemplate(params) {
   }
 }
 
+// src/push.ts
+function getPushUrl(element) {
+  const pushUrl = element.getAttribute("s-push");
+  return pushUrl || null;
+}
+function handlePush(url) {
+  window.history.pushState({}, "", url);
+}
+
 // src/main.ts
 (function() {
   let appearObserver;
@@ -362,7 +376,7 @@ function handleTemplate(params) {
     return null;
   }
   function queryEventHandlingElements(root = document.body) {
-    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template]");
+    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template],[s-push]");
   }
   function broadcastEvent(eventOrType) {
     const event = eventOrType instanceof Event ? eventOrType : new CustomEvent(eventOrType);
@@ -375,7 +389,8 @@ function handleTemplate(params) {
       const evalCode = getEvalCode(element);
       const templateSelector = getTemplateSelector(element);
       const targetSelector = element.getAttribute("s-target");
-      if (!emitSpec && !requestConfig && !evalCode && !templateSelector) {
+      const pushUrl = getPushUrl(element);
+      if (!emitSpec && !requestConfig && !evalCode && !templateSelector && !pushUrl) {
         continue;
       }
       const eventSpecs = parseEventSpecs(element);
@@ -391,7 +406,8 @@ function handleTemplate(params) {
           evalCode,
           templateSelector,
           targetSelector,
-          swapStrategy: getSwapStrategy(element)
+          swapStrategy: getSwapStrategy(element),
+          pushUrl
         });
       }
     }
@@ -430,7 +446,7 @@ function handleTemplate(params) {
   function getAnyElementRequestConfig(element) {
     return getElementRequestConfig(element, "get") ?? getElementRequestConfig(element, "post") ?? getElementRequestConfig(element, "put") ?? getElementRequestConfig(element, "delete");
   }
-  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector, targetSelector, swapStrategy }) {
+  function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector, targetSelector, swapStrategy, pushUrl }) {
     const confirmMessage = element.getAttribute("s-confirm");
     if (confirmMessage && !confirm(confirmMessage)) return;
     if (evalCode) {
@@ -438,6 +454,9 @@ function handleTemplate(params) {
     }
     if (emitSpec) {
       handleEmit(element, emitSpec);
+    }
+    if (pushUrl) {
+      handlePush(pushUrl);
     }
     if (requestConfig) {
       const sendRequestParams = {
@@ -463,6 +482,9 @@ function handleTemplate(params) {
           }
         } else if (result.event) {
           broadcastEvent(result.event);
+        }
+        if (result.pushUrl) {
+          handlePush(result.pushUrl);
         }
         element.dispatchEvent(new CustomEvent("slim:ok"));
       }).catch((error) => {

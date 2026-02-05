@@ -65,6 +65,10 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 
 - `s-template="#selector"` - Use the innerHTML of the template
 
+### History Management
+
+- `s-push="/path"` - Push URL to browser history on event
+
 ### Other Attributes
 
 - `s-confirm="message"` - Confirmation dialog
@@ -169,6 +173,22 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 <div id="container"></div>
 ```
 
+### History Management
+
+```html
+<!-- Push history on button click -->
+<button s-push="/dashboard">Go to Dashboard</button>
+
+<!-- Push history alongside a request -->
+<button s-get="/api/data" s-push="/data-view">Load Data</button>
+
+<!-- Form submission with history push -->
+<form s-post="/api/submit" s-push="/success">
+  <input name="item" required>
+  <button type="submit">Submit</button>
+</form>
+```
+
 ## Default Event Bindings
 
 Elements trigger requests automatically when `s-on` is not specified:
@@ -188,6 +208,7 @@ Every request sent by Slim includes:
 
 - `S-Target: selector` - Override update target
 - `S-Emit: event-name` - Broadcast event after update
+- `S-Push: /path` - Push URL to browser history
 - `S-Refresh: true` - Reload page
 
 ## Response Content Types

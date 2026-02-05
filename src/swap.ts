@@ -1,13 +1,11 @@
 import { PerformSwapParams, SwapStrategy } from "./types.ts";
 import { determineTargets } from "./response.ts";
 
-
 export function getSwapStrategy(element: Element): SwapStrategy {
   const swapValue = element.getAttribute("s-swap");
   if (swapValue === "outer") return "outer";
   return "inner"; // default
 }
-
 
 function performInnerSwap(
   target: Element,
@@ -47,7 +45,13 @@ function performOuterSwap(
 }
 
 export function performSwap(params: PerformSwapParams): void {
-  const { content, element, targetSelector, swapStrategy, observeElementsWithAppearEvent } = params;
+  const {
+    content,
+    element,
+    targetSelector,
+    swapStrategy,
+    observeElementsWithAppearEvent,
+  } = params;
   const targets = determineTargets(element, targetSelector);
 
   for (const target of targets) {

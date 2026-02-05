@@ -12,6 +12,7 @@ import { getEmitSpec } from "./emit.ts";
 import { getEvalCode, handleEval } from "./eval.ts";
 import { getTemplateSelector, handleTemplate } from "./template.ts";
 import { getSwapStrategy, performSwap } from "./swap.ts";
+import { getPushUrl, handlePush } from "./push.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
@@ -27,7 +28,7 @@ import { getSwapStrategy, performSwap } from "./swap.ts";
 
   function queryEventHandlingElements(root: Element = document.body) {
     return root.querySelectorAll(
-      "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template]",
+      "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template],[s-push]",
     );
   }
 
@@ -46,7 +47,11 @@ import { getSwapStrategy, performSwap } from "./swap.ts";
       const evalCode = getEvalCode(element);
       const templateSelector = getTemplateSelector(element);
       const targetSelector = element.getAttribute("s-target");
-      if (!emitSpec && !requestConfig && !evalCode && !templateSelector) {
+      const pushUrl = getPushUrl(element);
+      if (
+        !emitSpec && !requestConfig && !evalCode && !templateSelector &&
+        !pushUrl
+      ) {
         continue;
       }
 
@@ -64,6 +69,7 @@ import { getSwapStrategy, performSwap } from "./swap.ts";
           templateSelector,
           targetSelector,
           swapStrategy: getSwapStrategy(element),
+          pushUrl,
         });
       }
     }
@@ -123,6 +129,7 @@ import { getSwapStrategy, performSwap } from "./swap.ts";
       templateSelector,
       targetSelector,
       swapStrategy,
+      pushUrl,
     }: EventHandler,
   ) {
     const confirmMessage = element.getAttribute("s-confirm");
@@ -134,6 +141,10 @@ import { getSwapStrategy, performSwap } from "./swap.ts";
 
     if (emitSpec) {
       handleEmit(element, emitSpec);
+    }
+
+    if (pushUrl) {
+      handlePush(pushUrl);
     }
 
     if (requestConfig) {
@@ -165,6 +176,9 @@ import { getSwapStrategy, performSwap } from "./swap.ts";
             }
           } else if (result.event) {
             broadcastEvent(result.event);
+          }
+          if (result.pushUrl) {
+            handlePush(result.pushUrl);
           }
           element.dispatchEvent(new CustomEvent("slim:ok"));
         })

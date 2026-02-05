@@ -17,6 +17,7 @@ export type RequestResult = {
   text: string | null;
   targets: Element[];
   swapStrategy: SwapStrategy;
+  pushUrl: string | null;
 };
 
 export type RequestConfig = {
@@ -51,6 +52,7 @@ export type EventHandler = {
   templateSelector: string | null;
   targetSelector: string | null;
   swapStrategy: SwapStrategy;
+  pushUrl: string | null;
 };
 
 export type EmitSpec = {

@@ -1,4 +1,9 @@
-import { PrepareFormDataResult, RequestResult, SendRequestParams, SwapStrategy } from "./types.ts";
+import {
+  PrepareFormDataResult,
+  RequestResult,
+  SendRequestParams,
+  SwapStrategy,
+} from "./types.ts";
 import { processResponse } from "./response.ts";
 
 function prepareFormData(
@@ -49,7 +54,9 @@ function sendFormRequest(
   headers["S-Location"] = window.location.href;
 
   return fetch(finalUrl, fetchOptions)
-    .then((response) => processResponse(response, element, targetSelector, swapStrategy));
+    .then((response) =>
+      processResponse(response, element, targetSelector, swapStrategy)
+    );
 }
 
 export function sendRequest(
@@ -73,6 +80,8 @@ export function sendRequest(
     headers["S-Location"] = window.location.href;
 
     return fetch(url, { method, headers, body })
-      .then((response) => processResponse(response, element, targetSelector, swapStrategy));
+      .then((response) =>
+        processResponse(response, element, targetSelector, swapStrategy)
+      );
   }
 }
