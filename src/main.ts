@@ -298,6 +298,8 @@ import { getPushUrl, handlePush } from "./push.ts";
     });
   }
 
+  (window as any).slim = { broadcastEvent };
+
   document.addEventListener("DOMContentLoaded", () => {
     initializeAppearObserver();
     registerEventHandlers();

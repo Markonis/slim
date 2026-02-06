@@ -598,6 +598,9 @@ function handlePush(url) {
       setTimeout(() => initWebSockets(), 1e3);
     });
   }
+  window.slim = {
+    broadcastEvent
+  };
   document.addEventListener("DOMContentLoaded", () => {
     initializeAppearObserver();
     registerEventHandlers();
