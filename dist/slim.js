@@ -61,11 +61,9 @@ function processResponse(response, element, targetSelector, swapStrategy) {
     location.reload();
     return createEmptyResult(response.status, swapStrategy);
   }
-  if (response.status >= 300 && response.status < 400) {
-    const location1 = response.headers.get("Location");
-    if (location1) {
-      window.location.href = location1;
-    }
+  const redirectLocation = response.headers.get("S-Redirect");
+  if (redirectLocation) {
+    window.location.href = redirectLocation;
     return createEmptyResult(response.status, swapStrategy);
   }
   const serverTargetSelector = response.headers.get("S-Target");

@@ -26,11 +26,9 @@ export function processResponse(
     return createEmptyResult(response.status, swapStrategy);
   }
 
-  if (response.status >= 300 && response.status < 400) {
-    const location = response.headers.get("Location");
-    if (location) {
-      window.location.href = location;
-    }
+  const redirectLocation = response.headers.get("S-Redirect");
+  if (redirectLocation) {
+    window.location.href = redirectLocation;
     return createEmptyResult(response.status, swapStrategy);
   }
 

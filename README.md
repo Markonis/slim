@@ -206,18 +206,13 @@ Every request sent by Slim includes:
 
 ## Server Response Handling
 
-### Status Codes
-
-- **3xx (Redirect)** - Automatically redirect to the `Location` header
-- **S-Refresh** - Reload the page with `S-Refresh: true`
-- **Other** - Process response body normally
-
 ### Response Headers
 
 - `S-Target: selector` - Override update target
 - `S-Emit: event-name` - Broadcast event after update
 - `S-Push: /path` - Push URL to browser history
 - `S-Refresh: true` - Reload page
+- `S-Redirect: /path` - Redirect to URL
 
 ## Response Content Types
 
