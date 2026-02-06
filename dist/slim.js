@@ -151,7 +151,8 @@ function sendFormRequest(url, method, element, targetSelector, swapStrategy) {
   const { url: finalUrl, body } = prepareFormData(element, method, url);
   const fetchOptions = {
     method,
-    redirect: "manual"
+    redirect: "manual",
+    mode: "same-origin"
   };
   if (body) {
     fetchOptions.body = body;
@@ -182,7 +183,8 @@ function sendRequest(params) {
       method,
       headers,
       body,
-      redirect: "manual"
+      redirect: "manual",
+      mode: "same-origin"
     }).then((response) => processResponse(response, element, targetSelector, swapStrategy));
   }
 }
