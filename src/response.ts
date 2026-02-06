@@ -1,5 +1,20 @@
 import { RequestResult, SwapStrategy } from "./types.ts";
 
+function createEmptyResult(
+  status: number,
+  swapStrategy: SwapStrategy,
+): Promise<RequestResult> {
+  return Promise.resolve({
+    status,
+    html: null,
+    text: null,
+    event: null,
+    targets: [],
+    swapStrategy,
+    pushUrl: null,
+  });
+}
+
 export function processResponse(
   response: Response,
   element: Element,
@@ -8,19 +23,15 @@ export function processResponse(
 ): Promise<RequestResult> {
   if (response.headers.get("S-Refresh") === "true") {
     location.reload();
-    return Promise.resolve({
-      status: response.status,
-      html: null,
-      text: null,
-      event: null,
-      targets: [],
-      swapStrategy,
-      pushUrl: null,
-    });
+    return createEmptyResult(response.status, swapStrategy);
   }
 
-  if (!response.ok) {
-    return Promise.reject();
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get("Location");
+    if (location) {
+      window.location.href = location;
+    }
+    return createEmptyResult(response.status, swapStrategy);
   }
 
   const serverTargetSelector = response.headers.get("S-Target");

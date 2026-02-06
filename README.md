@@ -204,7 +204,15 @@ Every request sent by Slim includes:
 
 - `S-Location` - The URL of the current page (for server context/analytics)
 
-## Server Response Headers
+## Server Response Handling
+
+### Status Codes
+
+- **3xx (Redirect)** - Automatically redirect to the `Location` header
+- **S-Refresh** - Reload the page with `S-Refresh: true`
+- **Other** - Process response body normally
+
+### Response Headers
 
 - `S-Target: selector` - Override update target
 - `S-Emit: event-name` - Broadcast event after update

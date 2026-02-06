@@ -45,21 +45,28 @@ function appendQueryParams(url, params) {
 }
 
 // src/response.ts
+function createEmptyResult(status, swapStrategy) {
+  return Promise.resolve({
+    status,
+    html: null,
+    text: null,
+    event: null,
+    targets: [],
+    swapStrategy,
+    pushUrl: null
+  });
+}
 function processResponse(response, element, targetSelector, swapStrategy) {
   if (response.headers.get("S-Refresh") === "true") {
     location.reload();
-    return Promise.resolve({
-      status: response.status,
-      html: null,
-      text: null,
-      event: null,
-      targets: [],
-      swapStrategy,
-      pushUrl: null
-    });
+    return createEmptyResult(response.status, swapStrategy);
   }
-  if (!response.ok) {
-    return Promise.reject();
+  if (response.status >= 300 && response.status < 400) {
+    const location1 = response.headers.get("Location");
+    if (location1) {
+      window.location.href = location1;
+    }
+    return createEmptyResult(response.status, swapStrategy);
   }
   const serverTargetSelector = response.headers.get("S-Target");
   const finalTargetSelector = serverTargetSelector || targetSelector;
