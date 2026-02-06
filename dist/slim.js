@@ -150,7 +150,8 @@ function getFullURL(url) {
 function sendFormRequest(url, method, element, targetSelector, swapStrategy) {
   const { url: finalUrl, body } = prepareFormData(element, method, url);
   const fetchOptions = {
-    method
+    method,
+    redirect: "manual"
   };
   if (body) {
     fetchOptions.body = body;
@@ -180,7 +181,8 @@ function sendRequest(params) {
     return fetch(url, {
       method,
       headers,
-      body
+      body,
+      redirect: "manual"
     }).then((response) => processResponse(response, element, targetSelector, swapStrategy));
   }
 }

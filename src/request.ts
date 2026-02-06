@@ -42,7 +42,7 @@ function sendFormRequest(
 ): Promise<RequestResult> {
   const { url: finalUrl, body } = prepareFormData(element, method, url);
 
-  const fetchOptions: RequestInit = { method };
+  const fetchOptions: RequestInit = { method, redirect: "manual" };
   if (body) {
     fetchOptions.body = body;
   }
@@ -79,7 +79,7 @@ export function sendRequest(
 
     headers["S-Location"] = window.location.href;
 
-    return fetch(url, { method, headers, body })
+    return fetch(url, { method, headers, body, redirect: "manual" })
       .then((response) =>
         processResponse(response, element, targetSelector, swapStrategy)
       );
