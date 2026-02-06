@@ -133,7 +133,7 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 ### Drag & Drop
 
 ```html
-<div draggable s-drag-json='{"id":"123"}' s-on="dragstart"></div>
+<div draggable s-drag-json='{"id":"123"}'></div>
 <div s-on="drop" s-post="/api/move" s-drop-effect="move"></div>
 ```
 
