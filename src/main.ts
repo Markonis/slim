@@ -13,9 +13,11 @@ import { getEvalCode, handleEval } from "./eval.ts";
 import { getTemplateSelector, handleTemplate } from "./template.ts";
 import { getSwapStrategy, performSwap } from "./swap.ts";
 import { getPushUrl, handlePush } from "./push.ts";
+import { parseTime } from "./time.ts";
 
 (function () {
   let appearObserver: IntersectionObserver;
+  const debounceTimers = new Map<Element, number>();
 
   function getElementRequestConfig(
     element: Element,
@@ -83,14 +85,14 @@ import { getPushUrl, handlePush } from "./push.ts";
           .find((handler) => handler.element.isSameNode(current));
 
         if (localHandler) {
-          handleEvent(localHandler);
+          scheduleEvent(localHandler);
         }
 
         const matchingGlobalHandlers = globalHandlers
           .filter((handler) => current.matches(handler.eventSpec.selector!));
 
         for (const globalHandler of matchingGlobalHandlers) {
-          handleEvent(globalHandler);
+          scheduleEvent(globalHandler);
         }
 
         if (event.type === "appear") {
@@ -106,7 +108,7 @@ import { getPushUrl, handlePush } from "./push.ts";
     } else { // Globally broadcasted event
       for (const handler of [...globalHandlers, ...localHandlers]) {
         if (handler.eventSpec.event === event.type) {
-          handleEvent(handler);
+          scheduleEvent(handler);
         }
       }
     }
@@ -117,6 +119,23 @@ import { getPushUrl, handlePush } from "./push.ts";
       getElementRequestConfig(element, "post") ??
       getElementRequestConfig(element, "put") ??
       getElementRequestConfig(element, "delete");
+  }
+
+  function scheduleEvent(handler: EventHandler) {
+    const debounceAttr = handler.element.getAttribute("s-debounce");
+    if (debounceAttr) {
+      const delay = parseTime(debounceAttr);
+      if (delay !== null) {
+        const existing = debounceTimers.get(handler.element);
+        if (existing !== undefined) clearTimeout(existing);
+        debounceTimers.set(handler.element, setTimeout(() => {
+          debounceTimers.delete(handler.element);
+          handleEvent(handler);
+        }, delay));
+        return;
+      }
+    }
+    handleEvent(handler);
   }
 
   function handleEvent(

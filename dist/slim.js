@@ -267,6 +267,14 @@ function handleDragEvents(element, event) {
   }
 }
 
+// src/time.ts
+function parseTime(str) {
+  const value = parseFloat(str);
+  if (isNaN(value)) return null;
+  const ms = str.endsWith("s") ? value * 1e3 : value;
+  return Math.round(ms);
+}
+
 // src/emit.ts
 function getEmitSpec(element) {
   const emitStr = element.getAttribute("s-emit");
@@ -274,10 +282,8 @@ function getEmitSpec(element) {
   const parts = emitStr.split(/\s+after\s/);
   if (parts.length === 2) {
     const event = parts[0];
-    let delay = parseFloat(parts[1]);
-    if (!event || isNaN(delay)) return null;
-    if (parts[1].endsWith("s")) delay *= 1e3;
-    delay = Math.round(delay);
+    const delay = parseTime(parts[1]);
+    if (!event || delay === null) return null;
     return {
       event,
       delay
@@ -376,6 +382,7 @@ function handlePush(url) {
 // src/main.ts
 (function() {
   let appearObserver;
+  const debounceTimers = /* @__PURE__ */ new Map();
   function getElementRequestConfig(element, method) {
     const url = element.getAttribute(`s-${method}`);
     if (url) return {
@@ -426,11 +433,11 @@ function handlePush(url) {
       while (current) {
         const localHandler = localHandlers.find((handler) => handler.element.isSameNode(current));
         if (localHandler) {
-          handleEvent(localHandler);
+          scheduleEvent(localHandler);
         }
         const matchingGlobalHandlers = globalHandlers.filter((handler) => current.matches(handler.eventSpec.selector));
         for (const globalHandler of matchingGlobalHandlers) {
-          handleEvent(globalHandler);
+          scheduleEvent(globalHandler);
         }
         if (event.type === "appear") {
           break;
@@ -447,13 +454,29 @@ function handlePush(url) {
         ...localHandlers
       ]) {
         if (handler.eventSpec.event === event.type) {
-          handleEvent(handler);
+          scheduleEvent(handler);
         }
       }
     }
   }
   function getAnyElementRequestConfig(element) {
     return getElementRequestConfig(element, "get") ?? getElementRequestConfig(element, "post") ?? getElementRequestConfig(element, "put") ?? getElementRequestConfig(element, "delete");
+  }
+  function scheduleEvent(handler) {
+    const debounceAttr = handler.element.getAttribute("s-debounce");
+    if (debounceAttr) {
+      const delay = parseTime(debounceAttr);
+      if (delay !== null) {
+        const existing = debounceTimers.get(handler.element);
+        if (existing !== void 0) clearTimeout(existing);
+        debounceTimers.set(handler.element, setTimeout(() => {
+          debounceTimers.delete(handler.element);
+          handleEvent(handler);
+        }, delay));
+        return;
+      }
+    }
+    handleEvent(handler);
   }
   function handleEvent({ event, element, requestConfig, emitSpec, evalCode, templateSelector, targetSelector, swapStrategy, pushUrl }) {
     const confirmMessage = element.getAttribute("s-confirm");

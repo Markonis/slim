@@ -57,6 +57,13 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 - `s-emit="event-name"` - Broadcast custom event
 - `s-emit="event after 1.5s"` - Delayed event
 
+### Debouncing
+
+- `s-debounce="300"` - Debounce the action by 300ms
+- `s-debounce="0.5s"` - Debounce using seconds notation
+
+When an element has `s-debounce`, rapid events are collapsed — the action fires only after the element goes quiet for the specified duration. Useful for search inputs and live filters.
+
 ### Executing JavaScript
 
 - `s-eval="javascript code"` - Execute JavaScript (with `this` = element)
@@ -157,6 +164,12 @@ Form data becomes query params for GET, FormData body for others. File uploads s
 ```html
 <button s-eval="console.log('Button clicked!', this)">Log</button>
 <button s-eval="this.style.color = 'red'" s-get="/api/data">Update and Log</button>
+```
+
+### Debounce
+
+```html
+<input s-on="input" s-debounce="300" s-get="/api/search" s-target="#results">
 ```
 
 ### Client-Side Templates

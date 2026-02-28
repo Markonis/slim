@@ -26,6 +26,17 @@
     <button id="template-button">Insert Template</button>
   </div>
 
+  <h2>Debounced Input</h2>
+  <p>Type in the input field below. The label updates only after you stop typing for 500ms:</p>
+  <input
+    type="text"
+    placeholder="Type something..."
+    s-on="input"
+    s-debounce="500"
+    s-eval="document.getElementById('debounce-output').textContent = this.value"
+  />
+  <p>Value: <span id="debounce-output">(none)</span></p>
+
   <h2>Outer Swap with Template</h2>
   <template id="card-template">
     <div style="border: 1px solid #ccc; padding: 12px; margin: 8px 0;">
