@@ -18,6 +18,10 @@ import { parseTime } from "./time.ts";
 (function () {
   let appearObserver: IntersectionObserver;
   const debounceTimers = new Map<Element, number>();
+  const sseConnections = new WeakMap<Element, EventSource>();
+
+  const SLIM_SELECTOR =
+    "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template],[s-push],[s-sse]";
 
   function getElementRequestConfig(
     element: Element,
@@ -29,9 +33,7 @@ import { parseTime } from "./time.ts";
   }
 
   function queryEventHandlingElements(root: Element = document.body) {
-    return root.querySelectorAll(
-      "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template],[s-push]",
-    );
+    return root.querySelectorAll(SLIM_SELECTOR);
   }
 
   function broadcastEvent(eventOrType: Event | string) {
@@ -237,6 +239,38 @@ import { parseTime } from "./time.ts";
     }
   }
 
+  function initSSE(element: Element) {
+    if (sseConnections.has(element)) return;
+
+    const url = element.getAttribute("s-sse");
+    if (!url) return;
+
+    const eventSource = new EventSource(url);
+    sseConnections.set(element, eventSource);
+
+    eventSource.addEventListener("innerHTML", (event: MessageEvent) => {
+      performSwap({
+        content: event.data,
+        element,
+        targetSelector: element.getAttribute("s-target"),
+        swapStrategy: getSwapStrategy(element),
+        observeElementsWithAppearEvent,
+      });
+    });
+
+    eventSource.onerror = () => {
+      console.warn("SSE connection failed for:", url);
+    };
+  }
+
+  function closeSSE(element: Element) {
+    const es = sseConnections.get(element);
+    if (es) {
+      es.close();
+      sseConnections.delete(element);
+    }
+  }
+
   function handleAppearIntersection(entries: IntersectionObserverEntry[]) {
     for (const entry of entries) {
       if (entry.isIntersecting) {
@@ -257,11 +291,16 @@ import { parseTime } from "./time.ts";
 
   function observeElementsWithAppearEvent(rootElement: Element) {
     const elements = queryEventHandlingElements(rootElement);
+
     for (const element of elements) {
       const eventSpecs = parseEventSpecs(element);
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
       if (hasAppearEvent) {
         appearObserver.observe(element);
+      }
+
+      if (element.hasAttribute("s-sse")) {
+        initSSE(element);
       }
     }
   }
@@ -294,6 +333,23 @@ import { parseTime } from "./time.ts";
     });
   }
 
+  function registerRemovalObserver() {
+    const removalObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const removedNode of Array.from(mutation.removedNodes)) {
+          if (removedNode instanceof Element) {
+            closeSSE(removedNode);
+            const children = removedNode.querySelectorAll("[s-sse]");
+            for (const child of children) {
+              closeSSE(child);
+            }
+          }
+        }
+      }
+    });
+    removalObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   function createWebSocket(handleError: () => void) {
     const url = document.body.getAttribute("s-ws");
     if (!url) return;
@@ -322,6 +378,7 @@ import { parseTime } from "./time.ts";
   document.addEventListener("DOMContentLoaded", () => {
     initializeAppearObserver();
     registerEventHandlers();
+    registerRemovalObserver();
     initWebSockets();
     observeElementsWithAppearEvent(document.body);
   });

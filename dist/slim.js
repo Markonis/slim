@@ -383,6 +383,8 @@ function handlePush(url) {
 (function() {
   let appearObserver;
   const debounceTimers = /* @__PURE__ */ new Map();
+  const sseConnections = /* @__PURE__ */ new WeakMap();
+  const SLIM_SELECTOR = "[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template],[s-push],[s-sse]";
   function getElementRequestConfig(element, method) {
     const url = element.getAttribute(`s-${method}`);
     if (url) return {
@@ -392,7 +394,7 @@ function handlePush(url) {
     return null;
   }
   function queryEventHandlingElements(root = document.body) {
-    return root.querySelectorAll("[s-get],[s-post],[s-put],[s-delete],[s-emit],[s-eval],[s-template],[s-push]");
+    return root.querySelectorAll(SLIM_SELECTOR);
   }
   function broadcastEvent(eventOrType) {
     const event = eventOrType instanceof Event ? eventOrType : new CustomEvent(eventOrType);
@@ -548,6 +550,32 @@ function handlePush(url) {
       }, emit.delay);
     }
   }
+  function initSSE(element) {
+    if (sseConnections.has(element)) return;
+    const url = element.getAttribute("s-sse");
+    if (!url) return;
+    const eventSource = new EventSource(url);
+    sseConnections.set(element, eventSource);
+    eventSource.addEventListener("innerHTML", (event) => {
+      performSwap({
+        content: event.data,
+        element,
+        targetSelector: element.getAttribute("s-target"),
+        swapStrategy: getSwapStrategy(element),
+        observeElementsWithAppearEvent
+      });
+    });
+    eventSource.onerror = () => {
+      console.warn("SSE connection failed for:", url);
+    };
+  }
+  function closeSSE(element) {
+    const es = sseConnections.get(element);
+    if (es) {
+      es.close();
+      sseConnections.delete(element);
+    }
+  }
   function handleAppearIntersection(entries) {
     for (const entry of entries) {
       if (entry.isIntersecting) {
@@ -573,6 +601,9 @@ function handlePush(url) {
       const hasAppearEvent = eventSpecs.some((spec) => spec.event === "appear");
       if (hasAppearEvent) {
         appearObserver.observe(element);
+      }
+      if (element.hasAttribute("s-sse")) {
+        initSSE(element);
       }
     }
   }
@@ -603,6 +634,25 @@ function handlePush(url) {
       broadcastEvent("hash:change");
     });
   }
+  function registerRemovalObserver() {
+    const removalObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const removedNode of Array.from(mutation.removedNodes)) {
+          if (removedNode instanceof Element) {
+            closeSSE(removedNode);
+            const children = removedNode.querySelectorAll("[s-sse]");
+            for (const child of children) {
+              closeSSE(child);
+            }
+          }
+        }
+      }
+    });
+    removalObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
   function createWebSocket(handleError) {
     const url = document.body.getAttribute("s-ws");
     if (!url) return;
@@ -627,6 +677,7 @@ function handlePush(url) {
   document.addEventListener("DOMContentLoaded", () => {
     initializeAppearObserver();
     registerEventHandlers();
+    registerRemovalObserver();
     initWebSockets();
     observeElementsWithAppearEvent(document.body);
   });

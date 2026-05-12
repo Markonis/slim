@@ -10,7 +10,7 @@ A lightweight, declarative frontend framework that brings server-driven interact
 - **Form handling** - Automatic serialization, file uploads, GET/POST/PUT/DELETE
 - **Drag and drop** - Native DnD with JSON data transfer
 - **Lazy loading** - Intersection Observer with `appear` events
-- **Real-time updates** - WebSocket support with auto-reconnect
+- **Real-time updates** - WebSocket and SSE support
 - **Query parameters** - Hierarchical collection with inheritance
 - **Response control** - Server headers override client targets and emit events
 - **Zero dependencies** - Pure JavaScript, no external libraries
@@ -81,6 +81,7 @@ When an element has `s-debounce`, rapid events are collapsed — the action fire
 - `s-confirm="message"` - Confirmation dialog
 - `s-query="key=value"` - Add query parameters
 - `s-ws="/websocket"` - WebSocket URL
+- `s-sse="/endpoint"` - Server-Sent Events URL
 
 ### Drag & Drop
 
@@ -143,6 +144,15 @@ When an element has `s-debounce`, rapid events are collapsed — the action fire
 <div draggable s-drag-json='{"id":"123"}'></div>
 <div s-on="drop" s-post="/api/move" s-drop-effect="move"></div>
 ```
+
+### Server-Sent Events (SSE)
+
+```html
+<div s-sse="/api/updates" s-target="#log"></div>
+<div id="log"></div>
+```
+
+Slim connects to the specified SSE endpoint and listens for events of type `innerHTML`. When an event is received, its `data` is treated as HTML and swapped into the target (respecting `s-target` and `s-swap`).
 
 ### Delegation
 
@@ -285,6 +295,7 @@ Requires:
 - Custom Events
 - Intersection Observer
 - WebSockets (for `s-ws`)
+- EventSource (for `s-sse`)
 
 ## License
 
