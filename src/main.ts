@@ -258,6 +258,10 @@ import { parseTime } from "./time.ts";
       });
     });
 
+    eventSource.addEventListener("eval", (event: MessageEvent) => {
+      handleEval(event.data, element, event);
+    });
+
     eventSource.onerror = () => {
       console.warn("SSE connection failed for:", url);
     };

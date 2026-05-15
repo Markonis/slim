@@ -565,6 +565,9 @@ function handlePush(url) {
         observeElementsWithAppearEvent
       });
     });
+    eventSource.addEventListener("eval", (event) => {
+      handleEval(event.data, element, event);
+    });
     eventSource.onerror = () => {
       console.warn("SSE connection failed for:", url);
     };
