@@ -152,7 +152,10 @@ When an element has `s-debounce`, rapid events are collapsed — the action fire
 <div id="log"></div>
 ```
 
-Slim connects to the specified SSE endpoint and listens for events of type `innerHTML`. When an event is received, its `data` is treated as HTML and swapped into the target (respecting `s-target` and `s-swap`).
+Slim connects to the specified SSE endpoint and listens for the following event types:
+
+- `innerHTML` - The event `data` is treated as HTML and swapped into the target (respecting `s-target` and `s-swap`).
+- `eval` - The event `data` is treated as JavaScript and executed. Within the script, `this` refers to the element with the `s-sse` attribute, and the `event` object is available.
 
 ### Delegation
 
